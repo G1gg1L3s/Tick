@@ -202,7 +202,7 @@ Item:
     | StaticItem
 
 Import:
-    import IDENTIFIER ;
+    import StringLiteral ;
 
 Function:
     fn IDENTIFIER ( FunctionParameters? ) FunctionReturnType? BlockExpression
@@ -251,7 +251,7 @@ StaticItem:
 ## Example
 With all of the rules, Tick language should look approximately as follows:
 ```
-import math; // The same as #include <math.h> in c
+import "math"; // The same as #include <math.h> in c
 
 struct S {
     a: i32,
