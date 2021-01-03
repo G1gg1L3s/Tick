@@ -3,10 +3,22 @@ pub use low_lexer::{Lexer as LLexer, TokenKind};
 
 use super::{error::PError, span::Span};
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct Token {
     pub span: Span,
     pub kind: TokenKind,
+}
+
+impl Token {
+    pub fn is(&self, kind: TokenKind) -> bool {
+        self.kind == kind
+    }
+    pub fn eof() -> Self {
+        Self {
+            span: Span::new(0, 0),
+            kind: TokenKind::EOF,
+        }
+    }
 }
 
 /// High-level lexer. Uses low-level one to get all the tokens,
