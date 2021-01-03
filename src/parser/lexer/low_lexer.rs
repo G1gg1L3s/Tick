@@ -1,6 +1,6 @@
 use std::str::Chars;
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Clone, Copy)]
 pub enum TokenKind {
     /// "+"
     Plus,
