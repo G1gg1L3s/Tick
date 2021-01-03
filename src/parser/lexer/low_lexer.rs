@@ -61,7 +61,7 @@ pub enum TokenKind {
     /// "}"
     CloseBrace,
     Number,
-    /// Any indentifier including keywords
+    /// Any identifier including keywords
     Ident,
     /// End of file
     EOF,
@@ -76,32 +76,30 @@ pub struct Token {
 }
 
 pub struct Lexer<'a> {
-    src: Chars<'a>,
-    bumped: usize,
+    start: &'a str,
+    chars: Chars<'a>,
 }
 
 impl<'a> Lexer<'a> {
     pub fn new(src: &'a str) -> Self {
         Self {
-            src: src.chars(),
-            bumped: 0,
+            start: src,
+            chars: src.chars(),
         }
     }
 
     pub fn bump(&mut self) -> char {
-        let res = self.nth(self.bumped);
-        self.bumped += 1;
-        res
+        self.chars.next().unwrap_or('\0')
     }
 
     fn bump_while(&mut self, pred: fn(char) -> bool) {
-        while pred(self.nth(0)) {
+        while pred(self.first()) {
             self.bump();
         }
     }
 
-    fn nth(&self, n: usize) -> char {
-        self.src.clone().nth(self.bumped + n).unwrap_or('\0')
+    pub fn first(&self) -> char {
+        self.chars.clone().next().unwrap_or('\0')
     }
 
     pub fn next_token(&mut self) -> Token {
@@ -139,9 +137,8 @@ impl<'a> Lexer<'a> {
     }
 
     pub fn advance(&mut self) -> usize {
-        let res = self.bumped;
-        let _ = self.src.advance_by(self.bumped);
-        self.bumped = 0;
+        let res = self.start.len() - self.chars.as_str().len();
+        self.start = self.chars.as_str();
         res
     }
 
@@ -151,7 +148,7 @@ impl<'a> Lexer<'a> {
     }
 
     fn eat(&mut self, c: char) -> bool {
-        if self.nth(0) == c {
+        if self.first() == c {
             self.bump();
             true
         } else {
@@ -162,7 +159,7 @@ impl<'a> Lexer<'a> {
     fn number(&mut self) -> TokenKind {
         let mut dot = false;
         loop {
-            let c = self.nth(0);
+            let c = self.first();
             match c {
                 '0'..='9' => {}
                 '.' => {
