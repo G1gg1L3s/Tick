@@ -82,8 +82,26 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_expr_with(&mut self, min_prec: usize) -> PResult<Expr> {
-        let lhs = self.parse_prefix_expr()?;
+    fn parse_expr_with(&mut self, min_prec: i32) -> PResult<Expr> {
+        let mut lhs = self.parse_prefix_expr()?;
+        loop {
+            let op = match self.token.kind {
+                TokenKind::Plus => BinOp::Add,
+                TokenKind::Minus => BinOp::Sub,
+                TokenKind::Star => BinOp::Mul,
+                TokenKind::Slash => BinOp::Div,
+                _ => break,
+
+            };
+            let (left_prec, right_prec) = op.infix_binding_power();
+            if left_prec < min_prec {
+                break;
+            }
+            self.bump();
+            let rhs = self.parse_expr_with(right_prec)?;
+            let span = lhs.span.to(rhs.span);
+            lhs = Expr::new_bin(span, op, lhs, rhs);
+        }
         Ok(lhs)
     }
 
