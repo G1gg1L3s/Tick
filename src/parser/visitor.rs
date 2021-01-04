@@ -10,6 +10,7 @@ pub trait Visitor<T> {
             ExprKind::BinExpr(op, ref lhs, ref rhs) => self.visit_bin(op, lhs, rhs, span),
             ExprKind::Grouped(ref gr) => self.visit_group(gr, span),
             ExprKind::Field(ref lhs, ref field) => self.visit_field(lhs, field, span),
+            ExprKind::AddrOf(mutab, ref expr) => self.visit_addr_of(mutab, expr, span),
         }
     }
     fn visit_lit(&mut self, tk: &Token, span: Span) -> T;
@@ -17,6 +18,7 @@ pub trait Visitor<T> {
     fn visit_bin(&mut self, op: BinOp, lhs: &Expr, rhs: &Expr, span: Span) -> T;
     fn visit_group(&mut self, expr: &Expr, span: Span) -> T;
     fn visit_field(&mut self, expr: &Expr, field: &Token, span: Span) -> T;
+    fn visit_addr_of(&mut self, mutab: Mutability, expr: &Expr, span: Span) -> T;
 }
 
 pub struct DebugFormatter<'a> {
@@ -79,6 +81,14 @@ impl<'a> Visitor<()> for DebugFormatter<'a> {
         self.visit_expr(lhs);
         let field = token.span.extract(self.src);
         println!("{:indent$}{:?}", "", field, indent = self.indent());
+        self.indent -= 1;
+    }
+
+    fn visit_addr_of(&mut self, mutab: Mutability, expr: &Expr, _: Span) -> () {
+        println!("{:indent$}ADDRESS_OF:", "", indent = self.indent());
+        self.indent += 1;
+        println!("{:indent$}{:?}", "", mutab, indent = self.indent());
+        self.visit_expr(expr);
         self.indent -= 1;
     }
 }

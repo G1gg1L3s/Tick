@@ -104,6 +104,7 @@ impl<'a> Parser<'a> {
             TokenKind::Bang => self.parse_un(UnOp::Not),
             TokenKind::At => self.parse_un(UnOp::Deref),
             TokenKind::OpenParen => self.parse_grouping(),
+            TokenKind::And => self.parse_addrof(),
             _ => Err(PError::new("Expect expression", self.token.span)),
         }
     }
@@ -155,9 +156,22 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_grouping(&mut self) -> PResult<Expr> {
-        self.consume(TokenKind::OpenParen, "(")?;
+        self.bump(); // "("
         let expr = self.parse_expr()?;
         self.consume(TokenKind::CloseParen, ")")?;
         Ok(Expr::new_group(expr.span, expr))
+    }
+
+    fn parse_addrof(&mut self) -> PResult<Expr> {
+        let lo = self.token.span;
+        self.bump(); // '&'
+        let mutab = if self.eat(TokenKind::Mut) {
+            Mutability::Mut
+        } else {
+            Mutability::Const
+        };
+        let expr = self.parse_expr_with(UN)?;
+        let span = lo.to(expr.span);
+        Ok(Expr::new_addr_of(span, mutab, expr))
     }
 }

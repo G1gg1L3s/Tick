@@ -40,13 +40,26 @@ pub enum BinOp {
     Gt,
 }
 
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum Mutability {
+    Const,
+    Mut,
+}
+
 #[derive(Debug)]
 pub enum ExprKind {
+    /// Literals like number or strings
     Literal(Token),
+    /// A unary operation
     UnExpr(UnOp, Box<Expr>),
+    /// A binary operation
     BinExpr(BinOp, Box<Expr>, Box<Expr>),
+    /// Grouped expression `(expr)`
     Grouped(Box<Expr>),
+    /// Access of a struct field `a.b`
     Field(Box<Expr>, Token),
+    /// A taking address of expression operation `& mut? expr`
+    AddrOf(Mutability, Box<Expr>),
 }
 
 #[derive(Debug)]
@@ -88,6 +101,14 @@ impl Expr {
         Self {
             span,
             kind: ExprKind::Field(Box::new(lhs), name),
+        }
+    }
+
+
+    pub fn new_addr_of(span: Span, mutab: Mutability, expr: Expr) -> Self {
+        Self {
+            span,
+            kind: ExprKind::AddrOf(mutab, Box::new(expr)),
         }
     }
 }
