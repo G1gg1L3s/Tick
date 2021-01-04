@@ -21,7 +21,8 @@ const ADD: PrecPair = (7, 8);
 const MUL: PrecPair = (9, 10);
 const AS: PrecPair = (12, 11);
 const UN: i32 = 13;
-const FIELD: PrecPair = (15, 16);
+const CALL: PrecPair = (15, 16);
+const FIELD: PrecPair = (17, 18);
 
 impl TokenKind {
     fn infix_binding_power(&self) -> PrecPair {
@@ -37,6 +38,7 @@ impl TokenKind {
             TokenKind::Plus | TokenKind::Minus => ADD,
             TokenKind::Star | TokenKind::Slash | TokenKind::Percent => MUL,
             TokenKind::Dot => FIELD,
+            TokenKind::OpenSquare => CALL,
             _ => (0, 0),
         }
     }
@@ -143,7 +145,8 @@ impl<'a> Parser<'a> {
             TokenKind::GE => self.parse_bin(BinOp::Ge, lhs, right_prec),
             TokenKind::BangEq => self.parse_bin(BinOp::Ne, lhs, right_prec),
 
-            TokenKind::Dot => self.parse_field(lhs, right_prec),
+            TokenKind::Dot => self.parse_field(lhs),
+            TokenKind::OpenSquare => self.parse_index(lhs),
             _ => unimplemented!(),
         }
     }
@@ -155,7 +158,7 @@ impl<'a> Parser<'a> {
         Ok(Expr::new_bin(span, op, lhs, rhs))
     }
 
-    fn parse_field(&mut self, lhs: Expr, _: i32) -> PResult<Expr> {
+    fn parse_field(&mut self, lhs: Expr) -> PResult<Expr> {
         self.bump(); // '.'
         let field = self.consume(TokenKind::Ident, "identifier after dot expression")?;
         let span = lhs.span.to(field.span);
@@ -192,5 +195,14 @@ impl<'a> Parser<'a> {
             self.consume(TokenKind::And, "&")?;
         }
         Ok(())
+    }
+
+    fn parse_index(&mut self, lhs: Expr) -> PResult<Expr> {
+        let lo = self.token.span;
+        self.bump(); // '['
+        let index = self.parse_expr()?;
+        let span = lo.to(index.span);
+        self.consume(TokenKind::CloseSquare, "]")?;
+        Ok(Expr::new_index(span, lhs, index))
     }
 }

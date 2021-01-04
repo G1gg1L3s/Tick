@@ -60,6 +60,8 @@ pub enum ExprKind {
     Field(Box<Expr>, Token),
     /// A taking address of expression operation `& mut? expr`
     AddrOf(Mutability, Box<Expr>),
+    /// An indexing operation `expr[expr]`.
+    Index(Box<Expr>, Box<Expr>),
 }
 
 #[derive(Debug)]
@@ -108,6 +110,13 @@ impl Expr {
         Self {
             span,
             kind: ExprKind::AddrOf(mutab, Box::new(expr)),
+        }
+    }
+
+    pub fn new_index(span: Span, lhs: Expr, index: Expr) -> Self {
+        Self {
+            span,
+            kind: ExprKind::Index(Box::new(lhs), Box::new(index)),
         }
     }
 }
