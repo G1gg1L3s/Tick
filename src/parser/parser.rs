@@ -27,9 +27,14 @@ impl TokenKind {
         match self {
             TokenKind::OrOr => OR,
             TokenKind::AndAnd => AND,
-            TokenKind::LE | TokenKind::Lt | TokenKind::EqEq | TokenKind::GE | TokenKind::Gt => COMP,
+            TokenKind::LE
+            | TokenKind::Lt
+            | TokenKind::EqEq
+            | TokenKind::GE
+            | TokenKind::Gt
+            | TokenKind::BangEq => COMP,
             TokenKind::Plus | TokenKind::Minus => ADD,
-            TokenKind::Star | TokenKind::Slash => MUL,
+            TokenKind::Star | TokenKind::Slash | TokenKind::Percent => MUL,
             TokenKind::Dot => FIELD,
             _ => (0, 0),
         }
@@ -128,6 +133,7 @@ impl<'a> Parser<'a> {
             TokenKind::Minus => self.parse_bin(BinOp::Sub, lhs, right_prec),
             TokenKind::Star => self.parse_bin(BinOp::Mul, lhs, right_prec),
             TokenKind::Slash => self.parse_bin(BinOp::Div, lhs, right_prec),
+            TokenKind::Percent => self.parse_bin(BinOp::Rem, lhs, right_prec),
             TokenKind::AndAnd => self.parse_bin(BinOp::And, lhs, right_prec),
             TokenKind::OrOr => self.parse_bin(BinOp::Or, lhs, right_prec),
             TokenKind::Lt => self.parse_bin(BinOp::Lt, lhs, right_prec),
@@ -135,6 +141,7 @@ impl<'a> Parser<'a> {
             TokenKind::EqEq => self.parse_bin(BinOp::Eq, lhs, right_prec),
             TokenKind::Gt => self.parse_bin(BinOp::Gt, lhs, right_prec),
             TokenKind::GE => self.parse_bin(BinOp::Ge, lhs, right_prec),
+            TokenKind::BangEq => self.parse_bin(BinOp::Ne, lhs, right_prec),
 
             TokenKind::Dot => self.parse_field(lhs, right_prec),
             _ => unimplemented!(),

@@ -104,7 +104,6 @@ impl Expr {
         }
     }
 
-
     pub fn new_addr_of(span: Span, mutab: Mutability, expr: Expr) -> Self {
         Self {
             span,
