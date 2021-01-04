@@ -40,25 +40,13 @@ pub enum BinOp {
     Gt,
 }
 
-impl BinOp {
-    pub fn infix_binding_power(self) -> (i32, i32) {
-        use BinOp::*;
-        // TODO: use other precedence rules
-        // for now, source is https://matklad.github.io/2020/04/13/simple-but-powerful-pratt-parsing.html
-        match self {
-            Add | Sub => (1, 2),
-            Mul | Div => (3, 4),
-            _ => (0, 0),
-        }
-    }
-}
-
 #[derive(Debug)]
 pub enum ExprKind {
     Literal(Token),
     UnExpr(UnOp, Box<Expr>),
     BinExpr(BinOp, Box<Expr>, Box<Expr>),
     Grouped(Box<Expr>),
+    Field(Box<Expr>, Token),
 }
 
 #[derive(Debug)]
@@ -92,7 +80,14 @@ impl Expr {
     pub fn new_bin(span: Span, op: BinOp, lhs: Expr, rhs: Expr) -> Self {
         Self {
             span,
-            kind: ExprKind::BinExpr(op, Box::new(lhs), Box::new(rhs))
+            kind: ExprKind::BinExpr(op, Box::new(lhs), Box::new(rhs)),
+        }
+    }
+
+    pub fn new_field(span: Span, lhs: Expr, name: Token) -> Self {
+        Self {
+            span,
+            kind: ExprKind::Field(Box::new(lhs), name),
         }
     }
 }

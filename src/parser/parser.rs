@@ -148,9 +148,11 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_field(&mut self, lhs: Expr, _: i32) -> PResult<Expr> {
-        unimplemented!()
+        self.bump(); // '.'
+        let field = self.consume(TokenKind::Ident, "identifier after dot expression")?;
+        let span = lhs.span.to(field.span);
+        Ok(Expr::new_field(span, lhs, field))
     }
-
 
     fn parse_grouping(&mut self) -> PResult<Expr> {
         self.consume(TokenKind::OpenParen, "(")?;
