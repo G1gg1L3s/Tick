@@ -38,6 +38,8 @@ pub enum BinOp {
     Ge,
     /// '>'
     Gt,
+    /// '='
+    Assign,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]

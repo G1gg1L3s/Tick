@@ -14,19 +14,21 @@ pub struct Parser<'a> {
 
 type PrecPair = (i32, i32);
 
-const OR: PrecPair = (1, 2);
-const AND: PrecPair = (3, 4);
-const COMP: PrecPair = (5, 6);
-const ADD: PrecPair = (7, 8);
-const MUL: PrecPair = (9, 10);
-const AS: PrecPair = (12, 11);
-const UN: i32 = 13;
-const CALL: PrecPair = (15, 16);
-const FIELD: PrecPair = (17, 18);
+const ASSIGN: PrecPair = (1, 2);
+const OR: PrecPair = (3, 4);
+const AND: PrecPair = (5, 6);
+const COMP: PrecPair = (7, 8);
+const ADD: PrecPair = (9, 10);
+const MUL: PrecPair = (11, 12);
+const AS: PrecPair = (13, 14);
+const UN: i32 = 15;
+const CALL: PrecPair = (17, 18);
+const FIELD: PrecPair = (19, 20);
 
 impl TokenKind {
     fn infix_binding_power(&self) -> PrecPair {
         match self {
+            TokenKind::Eq => ASSIGN,
             TokenKind::OrOr => OR,
             TokenKind::AndAnd => AND,
             TokenKind::LE
@@ -144,6 +146,7 @@ impl<'a> Parser<'a> {
             TokenKind::Gt => self.parse_bin(BinOp::Gt, lhs, right_prec),
             TokenKind::GE => self.parse_bin(BinOp::Ge, lhs, right_prec),
             TokenKind::BangEq => self.parse_bin(BinOp::Ne, lhs, right_prec),
+            TokenKind::Eq => self.parse_bin(BinOp::Assign, lhs, right_prec),
 
             TokenKind::Dot => self.parse_field(lhs),
             TokenKind::OpenSquare => self.parse_index(lhs),
