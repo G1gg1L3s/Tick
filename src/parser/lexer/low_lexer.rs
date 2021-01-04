@@ -61,8 +61,23 @@ pub enum TokenKind {
     /// "}"
     CloseBrace,
     Number,
-    /// Any identifier including keywords
+    /// Any identifier
     Ident,
+
+    // Keywords:
+    As,
+    If,
+    While,
+    Fn,
+    Struct,
+    Import,
+    Const,
+    Static,
+    Enum,
+    Mut,
+    Type,
+    Union,
+
     /// End of file
     EOF,
     /// For errors
@@ -137,7 +152,7 @@ impl<'a> Lexer<'a> {
     }
 
     pub fn advance(&mut self) -> usize {
-        let res = self.start.len() - self.chars.as_str().len();
+        let res = self.bumped();
         self.start = self.chars.as_str();
         res
     }
@@ -176,9 +191,29 @@ impl<'a> Lexer<'a> {
         TokenKind::Number
     }
 
+    fn bumped(&self) -> usize {
+        self.start.len() - self.chars.as_str().len()
+    }
+
     fn ident(&mut self) -> TokenKind {
         self.bump_while(is_ident_body);
-        TokenKind::Ident
+        let len = self.bumped();
+        let ident = &self.start[..len];
+        match ident {
+            "as" => TokenKind::As,
+            "if" => TokenKind::If,
+            "while" => TokenKind::While,
+            "fn" => TokenKind::Fn,
+            "struct" => TokenKind::Struct,
+            "import" => TokenKind::Import,
+            "const" => TokenKind::Const,
+            "static" => TokenKind::Static,
+            "enum" => TokenKind::Enum,
+            "mut" => TokenKind::Mut,
+            "type" => TokenKind::Type,
+            "union" => TokenKind::Union,
+            _ => TokenKind::Ident,
+        }
     }
 
     fn maybe_two_chars(&mut self, next: char, iftrue: TokenKind, iffalse: TokenKind) -> TokenKind {
@@ -342,4 +377,17 @@ fn ident_test() {
             },
         ]
     );
+}
+
+#[test]
+fn keywords_test() {
+    use TokenKind::*;
+    let input = "if while as ident";
+    let tokens: Vec<_> = Lexer::new(input)
+        .collect()
+        .into_iter()
+        .map(|tk| tk.kind)
+        .filter(|kind| !matches!(kind, Whitespace | EOF))
+        .collect();
+    assert_eq!(tokens, vec![If, While, As, Ident]);
 }
