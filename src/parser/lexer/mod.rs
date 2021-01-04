@@ -61,7 +61,7 @@ impl<'a> Lexer<'a> {
             }
             start = end;
         }
-
+        self.tokens.reverse();
         (self.tokens, self.errors)
     }
 }

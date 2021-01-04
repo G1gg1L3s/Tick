@@ -6,6 +6,7 @@ type PResult<T> = Result<T, PError>;
 
 pub struct Parser<'a> {
     src: &'a str,
+    /// Stack of tokens in reverse order
     tokens: Vec<Token>,
     idx: usize,
     token: Token,
@@ -52,12 +53,11 @@ impl<'a> Parser<'a> {
     }
 
     pub fn is_end(&self) -> bool {
-        self.idx == self.tokens.len()
+        self.tokens.is_empty()
     }
 
     pub fn bump(&mut self) {
-        self.token = *self.tokens.get(self.idx).unwrap_or(&Token::eof());
-        self.idx += 1;
+        self.token = self.tokens.pop().unwrap_or(Token::eof());
     }
 
     fn consume(&mut self, kind: TokenKind, expect: &str) -> PResult<Token> {
@@ -109,7 +109,7 @@ impl<'a> Parser<'a> {
             TokenKind::Bang => self.parse_un(UnOp::Not),
             TokenKind::At => self.parse_un(UnOp::Deref),
             TokenKind::OpenParen => self.parse_grouping(),
-            TokenKind::And => self.parse_addrof(),
+            TokenKind::And | TokenKind::AndAnd => self.parse_addrof(),
             _ => Err(PError::new("Expect expression", self.token.span)),
         }
     }
@@ -171,7 +171,7 @@ impl<'a> Parser<'a> {
 
     fn parse_addrof(&mut self) -> PResult<Expr> {
         let lo = self.token.span;
-        self.bump(); // '&'
+        self.eat_and()?;
         let mutab = if self.eat(TokenKind::Mut) {
             Mutability::Mut
         } else {
@@ -180,5 +180,17 @@ impl<'a> Parser<'a> {
         let expr = self.parse_expr_with(UN)?;
         let span = lo.to(expr.span);
         Ok(Expr::new_addr_of(span, mutab, expr))
+    }
+
+    // Eats '&' possibly breaking '&&' if present
+    fn eat_and(&mut self) -> PResult<()> {
+        if self.token.is(TokenKind::AndAnd) {
+            let (_, hi) = self.token.span.split(1);
+            self.token.kind = TokenKind::And;
+            self.token.span = hi;
+        } else {
+            self.consume(TokenKind::And, "&")?;
+        }
+        Ok(())
     }
 }

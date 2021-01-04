@@ -26,4 +26,12 @@ impl Span {
             hi: hi.hi,
         }
     }
+
+    pub fn split(self, len: BytePos) -> (Self, Self) {
+        let Self{ lo, hi } = self;
+        let mid = lo + len;
+        assert!(lo < mid && mid < hi);
+        let (lo, mid, hi) = (lo as usize, mid as usize, hi as usize);
+        (Span::new(lo, mid), Span::new(mid, hi))
+    }
 }
