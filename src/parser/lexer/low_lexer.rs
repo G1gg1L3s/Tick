@@ -60,6 +60,12 @@ pub enum TokenKind {
     OpenBrace,
     /// "}"
     CloseBrace,
+
+    /// "["
+    OpenSquare,
+    /// "]"
+    CloseSquare,
+
     Number,
     /// Any identifier
     Ident,
@@ -124,6 +130,8 @@ impl<'a> Lexer<'a> {
             c if c.is_whitespace() => self.whitespace(),
             '{' => OpenBrace,
             '}' => CloseBrace,
+            '[' => OpenSquare,
+            ']' => CloseSquare,
             '+' => Plus,
             '-' => self.maybe_two_chars('>', Arrow, Minus),
             '*' => Star,
