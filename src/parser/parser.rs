@@ -1,6 +1,9 @@
-use super::{ast::*, span::{self, Span}};
 use super::error::PError;
 use super::lexer::{Token, TokenKind};
+use super::{
+    ast::*,
+    span::{self, Span},
+};
 
 type PResult<T> = Result<T, PError>;
 
@@ -41,6 +44,7 @@ impl TokenKind {
             TokenKind::Star | TokenKind::Slash | TokenKind::Percent => MUL,
             TokenKind::Dot => FIELD,
             TokenKind::OpenSquare | TokenKind::OpenParen => CALL,
+            TokenKind::As => AS,
             _ => (0, 0),
         }
     }
@@ -146,7 +150,7 @@ impl<'a> Parser<'a> {
     fn parse_one_token_expr(&mut self, kind: ExprKind) -> PResult<Expr> {
         let span = self.token.span;
         self.bump();
-        Ok(Expr{ kind, span })
+        Ok(Expr { kind, span })
     }
 
     fn parse_prefix_expr(&mut self) -> PResult<Expr> {
@@ -194,6 +198,7 @@ impl<'a> Parser<'a> {
             TokenKind::BangEq => self.parse_bin(BinOp::Ne, lhs, right_prec),
             TokenKind::Eq => self.parse_bin(BinOp::Assign, lhs, right_prec),
             TokenKind::OpenParen => self.parse_call(lhs),
+            TokenKind::As => self.parse_as_expr(lhs),
 
             TokenKind::Dot => self.parse_field(lhs),
             TokenKind::OpenSquare => self.parse_index(lhs),
@@ -223,7 +228,11 @@ impl<'a> Parser<'a> {
         Ok(Expr::new_call(func, params, span))
     }
 
-    fn parse_comma_list_expr(&mut self, mut span: Span, delim: TokenKind) -> PResult<(Vec<Expr>, Span)> {
+    fn parse_comma_list_expr(
+        &mut self,
+        mut span: Span,
+        delim: TokenKind,
+    ) -> PResult<(Vec<Expr>, Span)> {
         let mut res = Vec::new();
 
         if !self.token.is(delim) {
@@ -238,20 +247,15 @@ impl<'a> Parser<'a> {
                         if self.token.is(delim) {
                             break;
                         }
-                    },
-                    del if del == delim => { break },
+                    }
+                    del if del == delim => break,
                     _ => return Err(PError::new("Expect ',' or delimeter", self.token.span)),
                 }
-
             }
         }
         span.grow(self.token.span);
         self.bump();
         return Ok((res, span));
-    }
-
-    fn lookahead(&self) -> Option<&Token> {
-        self.tokens.iter().rev().nth(1)
     }
 
     fn parse_grouping(&mut self) -> PResult<Expr> {
@@ -293,5 +297,60 @@ impl<'a> Parser<'a> {
         let span = lo.to(index.span);
         self.consume(TokenKind::CloseSquare, "]")?;
         Ok(Expr::new_index(span, lhs, index))
+    }
+
+    fn parse_type(&mut self) -> PResult<Type> {
+        match self.token.kind {
+            TokenKind::And | TokenKind::AndAnd => self.parse_ptr_type(),
+            TokenKind::Bang => {
+                let span = self.token.span;
+                self.bump();
+                let kind = TypeKind::Never;
+                Ok(Type { kind, span })
+            }
+            TokenKind::OpenParen => {
+                let span = self.token.span;
+                self.bump();
+                let close = self.consume(TokenKind::CloseParen, ") as ending for void type")?;
+                let span = span.to(close.span);
+                let kind = TypeKind::Void;
+                Ok(Type { kind, span })
+            }
+            TokenKind::OpenSquare => self.parse_arr_type(),
+            TokenKind::Ident => {
+                let tk = self.token;
+                self.bump();
+                let span = tk.span;
+                let kind = TypeKind::Ident(tk);
+                Ok(Type { kind, span })
+            }
+            _ => Err(PError::new("Expect type exression", self.token.span)),
+        }
+    }
+
+    fn parse_ptr_type(&mut self) -> PResult<Type> {
+        let lo = self.token.span;
+        self.eat_and()?;
+        let mutab = if self.eat(TokenKind::Mut) {
+            Mutability::Mut
+        } else {
+            Mutability::Const
+        };
+        let ty = self.parse_type()?;
+        let span = lo.to(ty.span);
+        let kind = TypeKind::Pointer(mutab, Box::new(ty));
+        Ok(Type { kind, span })
+    }
+
+    fn parse_arr_type(&mut self) -> PResult<Type> {
+        todo!()
+    }
+
+    fn parse_as_expr(&mut self, lhs: Expr) -> PResult<Expr> {
+        let lo = self.token.span;
+        self.bump(); // 'as'
+        let ty = self.parse_type()?;
+        let span = lo.to(ty.span);
+        Ok(Expr::new_as(lhs, ty, span))
     }
 }
