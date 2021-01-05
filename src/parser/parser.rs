@@ -44,6 +44,23 @@ impl TokenKind {
             _ => (0, 0),
         }
     }
+
+    fn cab_begin_expr(&self) -> bool {
+        match self {
+            TokenKind::Number
+            | TokenKind::Ident
+            | TokenKind::Minus
+            | TokenKind::Bang
+            | TokenKind::At
+            | TokenKind::OpenParen
+            | TokenKind::And
+            | TokenKind::AndAnd
+            | TokenKind::Return
+            | TokenKind::Break
+            | TokenKind::Continue => true,
+            _ => false,
+        }
+    }
 }
 
 impl<'a> Parser<'a> {
@@ -106,6 +123,32 @@ impl<'a> Parser<'a> {
         Ok(Expr::new_un(span, op, expr))
     }
 
+    fn parse_return(&mut self) -> PResult<Expr> {
+        let lo = self.token.span;
+        self.bump();
+        let expr = self.maybe_parse_expr().transpose()?;
+        let span = if let Some(ref expr) = expr {
+            lo.to(expr.span)
+        } else {
+            lo
+        };
+        Ok(Expr::new_ret(span, expr))
+    }
+
+    fn maybe_parse_expr(&mut self) -> Option<PResult<Expr>> {
+        if self.token.kind.cab_begin_expr() {
+            Some(self.parse_expr())
+        } else {
+            None
+        }
+    }
+
+    fn parse_one_token_expr(&mut self, kind: ExprKind) -> PResult<Expr> {
+        let span = self.token.span;
+        self.bump();
+        Ok(Expr{ kind, span })
+    }
+
     fn parse_prefix_expr(&mut self) -> PResult<Expr> {
         match self.token.kind {
             TokenKind::Number | TokenKind::Ident => self.parse_lit(),
@@ -114,6 +157,9 @@ impl<'a> Parser<'a> {
             TokenKind::At => self.parse_un(UnOp::Deref),
             TokenKind::OpenParen => self.parse_grouping(),
             TokenKind::And | TokenKind::AndAnd => self.parse_addrof(),
+            TokenKind::Return => self.parse_return(),
+            TokenKind::Break => self.parse_one_token_expr(ExprKind::Break),
+            TokenKind::Continue => self.parse_one_token_expr(ExprKind::Continue),
             _ => Err(PError::new("Expect expression", self.token.span)),
         }
     }

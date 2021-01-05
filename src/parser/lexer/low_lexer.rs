@@ -82,7 +82,9 @@ pub enum TokenKind {
     Enum,
     Mut,
     Type,
-    Union,
+    Return,
+    Break,
+    Continue,
 
     /// End of file
     EOF,
@@ -219,7 +221,9 @@ impl<'a> Lexer<'a> {
             "enum" => TokenKind::Enum,
             "mut" => TokenKind::Mut,
             "type" => TokenKind::Type,
-            "union" => TokenKind::Union,
+            "return" => TokenKind::Return,
+            "break" => TokenKind::Break,
+            "continue" => TokenKind::Continue,
             _ => TokenKind::Ident,
         }
     }
@@ -232,6 +236,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    #[allow(dead_code)]
     pub fn collect(mut self) -> Vec<Token> {
         let mut res = Vec::new();
         loop {

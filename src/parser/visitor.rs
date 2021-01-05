@@ -12,6 +12,9 @@ pub trait Visitor<T> {
             ExprKind::Field(ref lhs, ref field) => self.visit_field(lhs, field, span),
             ExprKind::AddrOf(mutab, ref expr) => self.visit_addr_of(mutab, expr, span),
             ExprKind::Index(ref lhs, ref index) => self.visit_index(lhs, index, span),
+            ExprKind::Ret(ref expr) => self.visit_ret(expr.as_ref().map(Box::as_ref), span),
+            ExprKind::Break => self.visit_break(span),
+            ExprKind::Continue => self.visit_continue(span),
         }
     }
     fn visit_lit(&mut self, tk: &Token, span: Span) -> T;
@@ -21,6 +24,9 @@ pub trait Visitor<T> {
     fn visit_field(&mut self, expr: &Expr, field: &Token, span: Span) -> T;
     fn visit_addr_of(&mut self, mutab: Mutability, expr: &Expr, span: Span) -> T;
     fn visit_index(&mut self, lhs: &Expr, index: &Expr, span: Span) -> T;
+    fn visit_ret(&mut self, expr: Option<&Expr>, span: Span) -> T;
+    fn visit_break(&mut self, span: Span) -> T;
+    fn visit_continue(&mut self, span: Span) -> T;
 }
 
 pub struct DebugFormatter<'a> {
@@ -100,5 +106,24 @@ impl<'a> Visitor<()> for DebugFormatter<'a> {
         self.visit_expr(lhs);
         self.visit_expr(index);
         self.indent -= 1;
+    }
+
+    fn visit_ret(&mut self, expr: Option<&Expr>, _: Span) -> () {
+        println!("{:indent$}RETURN:", "", indent = self.indent());
+        self.indent += 1;
+        if let Some(expr) = expr {
+            self.visit_expr(expr);
+        } else {
+            println!("{:indent$}()", "", indent = self.indent());
+        }
+        self.indent -= 1;
+    }
+
+    fn visit_break(&mut self, _: Span) -> () {
+        println!("{:indent$}BREAK", "", indent = self.indent());
+    }
+
+    fn visit_continue(&mut self, _: Span) -> () {
+        println!("{:indent$}CONTINUE", "", indent = self.indent());
     }
 }

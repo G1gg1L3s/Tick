@@ -64,6 +64,12 @@ pub enum ExprKind {
     AddrOf(Mutability, Box<Expr>),
     /// An indexing operation `expr[expr]`.
     Index(Box<Expr>, Box<Expr>),
+    /// A `return`, with an optional value to be returned.
+    Ret(Option<Box<Expr>>),
+    /// A `break` from loop
+    Break,
+    /// A `continue` in loop
+    Continue,
 }
 
 #[derive(Debug)]
@@ -119,6 +125,27 @@ impl Expr {
         Self {
             span,
             kind: ExprKind::Index(Box::new(lhs), Box::new(index)),
+        }
+    }
+
+    pub fn new_ret(span: Span, expr: Option<Expr>) -> Self {
+        Self {
+            span,
+            kind: ExprKind::Ret(expr.map(Box::new)),
+        }
+    }
+
+    pub fn new_break(span: Span) -> Self {
+        Self {
+            span,
+            kind: ExprKind::Break,
+        }
+    }
+
+    pub fn new_continue(span: Span) -> Self {
+        Self {
+            span,
+            kind: ExprKind::Continue,
         }
     }
 }
