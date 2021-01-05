@@ -176,3 +176,12 @@ impl Expr {
         }
     }
 }
+
+impl Type {
+    pub fn new_arr(ty: Type, expr: Expr, span: Span) -> Self {
+        Self {
+            span,
+            kind: TypeKind::ArrayType(Box::new(ty), Box::new(expr)),
+        }
+    }
+}

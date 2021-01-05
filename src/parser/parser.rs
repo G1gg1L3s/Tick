@@ -1,9 +1,6 @@
 use super::error::PError;
 use super::lexer::{Token, TokenKind};
-use super::{
-    ast::*,
-    span::{self, Span},
-};
+use super::{ast::*, span::Span};
 
 type PResult<T> = Result<T, PError>;
 
@@ -11,7 +8,6 @@ pub struct Parser<'a> {
     src: &'a str,
     /// Stack of tokens in reverse order
     tokens: Vec<Token>,
-    idx: usize,
     token: Token,
 }
 
@@ -72,7 +68,6 @@ impl<'a> Parser<'a> {
         Self {
             src,
             tokens,
-            idx: 0,
             token: Token::eof(),
         }
     }
@@ -343,7 +338,14 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_arr_type(&mut self) -> PResult<Type> {
-        todo!()
+        let open = self.token.span;
+        self.bump(); // '['
+        let ty = self.parse_type()?;
+        self.consume(TokenKind::Semi, "';' after type of array type expression")?;
+        let expr = self.parse_expr()?;
+        let close = self.consume(TokenKind::CloseSquare, "]")?;
+        let span = open.to(close.span);
+        Ok(Type::new_arr(ty, expr, span))
     }
 
     fn parse_as_expr(&mut self, lhs: Expr) -> PResult<Expr> {

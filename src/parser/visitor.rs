@@ -177,8 +177,10 @@ impl<'a> Visitor<()> for DebugFormatter<'a> {
 
     fn visit_type_arr(&mut self, ty: &Type, expr: &Expr, _: Span) -> () {
         println!("{:indent$}ARRAY_TYPE", "", indent = self.indent());
+        self.indent += 1;
         self.visit_type(ty);
         self.visit_expr(expr);
+        self.indent -= 1;
     }
 
     fn visit_as(&mut self, lhs: &Expr, ty: &Type, _: Span) -> () {
