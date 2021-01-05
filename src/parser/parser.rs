@@ -99,6 +99,7 @@ impl<'a> Parser<'a> {
         }
     }
 
+    /// Entry point of parser. For now, parses only expressions
     pub fn parse(mut self) -> PResult<Expr> {
         self.bump();
         self.parse_expr()
@@ -108,12 +109,16 @@ impl<'a> Parser<'a> {
         self.parse_expr_with(1)
     }
 
+    /// Parses literals
+    /// self.token should be literal
     fn parse_lit(&mut self) -> PResult<Expr> {
         let tk = self.token;
         self.bump();
         Ok(Expr::new_lit(tk, tk.span))
     }
 
+    /// Parses unary expression
+    /// self.token should be operator
     fn parse_un(&mut self, op: UnOp) -> PResult<Expr> {
         let lo = self.token.span;
         self.bump();
@@ -122,6 +127,9 @@ impl<'a> Parser<'a> {
         Ok(Expr::new_un(span, op, expr))
     }
 
+
+    /// Parses return expr
+    /// self.token 'return' keyword
     fn parse_return(&mut self) -> PResult<Expr> {
         let lo = self.token.span;
         self.bump();
@@ -134,6 +142,7 @@ impl<'a> Parser<'a> {
         Ok(Expr::new_ret(span, expr))
     }
 
+    /// Checks is self.token can begin expression and tries to parse it
     fn maybe_parse_expr(&mut self) -> Option<PResult<Expr>> {
         if self.token.kind.cab_begin_expr() {
             Some(self.parse_expr())
@@ -142,12 +151,14 @@ impl<'a> Parser<'a> {
         }
     }
 
+    /// Bumpes self.token and returns expression with token's span and kind
     fn parse_one_token_expr(&mut self, kind: ExprKind) -> PResult<Expr> {
         let span = self.token.span;
         self.bump();
         Ok(Expr { kind, span })
     }
 
+    /// Dispatch and parse prefix expression
     fn parse_prefix_expr(&mut self) -> PResult<Expr> {
         match self.token.kind {
             TokenKind::Number | TokenKind::Ident => self.parse_lit(),
@@ -163,6 +174,7 @@ impl<'a> Parser<'a> {
         }
     }
 
+    /// Pratt parser for binary expressions
     fn parse_expr_with(&mut self, min_prec: i32) -> PResult<Expr> {
         let mut lhs = self.parse_prefix_expr()?;
 
@@ -176,6 +188,7 @@ impl<'a> Parser<'a> {
         Ok(lhs)
     }
 
+    /// Dispatch table for infix token
     fn parse_infix(&mut self, lhs: Expr, right_prec: i32) -> PResult<Expr> {
         match self.token.kind {
             TokenKind::Plus => self.parse_bin(BinOp::Add, lhs, right_prec),
@@ -201,6 +214,8 @@ impl<'a> Parser<'a> {
         }
     }
 
+    /// Parses binary expression
+    /// self.token should be operator
     fn parse_bin(&mut self, op: BinOp, lhs: Expr, right_prec: i32) -> PResult<Expr> {
         self.bump();
         let rhs = self.parse_expr_with(right_prec)?;
@@ -208,6 +223,8 @@ impl<'a> Parser<'a> {
         Ok(Expr::new_bin(span, op, lhs, rhs))
     }
 
+    /// Parses 'a.b'
+    /// lhs = 'a', self.token = '.'
     fn parse_field(&mut self, lhs: Expr) -> PResult<Expr> {
         self.bump(); // '.'
         let field = self.consume(TokenKind::Ident, "identifier after dot expression")?;
@@ -215,6 +232,8 @@ impl<'a> Parser<'a> {
         Ok(Expr::new_field(span, lhs, field))
     }
 
+    /// Parses call expression 'a(b)'
+    /// func = 'a', self.token = '('
     fn parse_call(&mut self, func: Expr) -> PResult<Expr> {
         let lo = self.token.span;
         self.bump(); // '('
@@ -223,6 +242,8 @@ impl<'a> Parser<'a> {
         Ok(Expr::new_call(func, params, span))
     }
 
+    /// Parses list of expression possibly with trailling comma and delimeter = delim
+    /// Open delimeter is already consumed
     fn parse_comma_list_expr(
         &mut self,
         mut span: Span,
@@ -253,6 +274,8 @@ impl<'a> Parser<'a> {
         return Ok((res, span));
     }
 
+    /// Parses expression in parentheses
+    /// self.token = "("
     fn parse_grouping(&mut self) -> PResult<Expr> {
         self.bump(); // "("
         let expr = self.parse_expr()?;
@@ -260,6 +283,8 @@ impl<'a> Parser<'a> {
         Ok(Expr::new_group(expr.span, expr))
     }
 
+    /// Parses address of operator ('& expr' or '& mut expr')
+    /// self.token = '&' || '&&'
     fn parse_addrof(&mut self) -> PResult<Expr> {
         let lo = self.token.span;
         self.eat_and()?;
@@ -285,6 +310,8 @@ impl<'a> Parser<'a> {
         Ok(())
     }
 
+    /// Parses index expression ('a[b]')
+    /// lhs = 'a', self.token = '['
     fn parse_index(&mut self, lhs: Expr) -> PResult<Expr> {
         let lo = self.token.span;
         self.bump(); // '['
@@ -294,6 +321,7 @@ impl<'a> Parser<'a> {
         Ok(Expr::new_index(span, lhs, index))
     }
 
+    /// Dispatches parsing of type based of self.token
     fn parse_type(&mut self) -> PResult<Type> {
         match self.token.kind {
             TokenKind::And | TokenKind::AndAnd => self.parse_ptr_type(),
@@ -323,6 +351,8 @@ impl<'a> Parser<'a> {
         }
     }
 
+    /// Parses pointer type ('&type' or '&mut type')
+    /// self.token = '&' or '&&'
     fn parse_ptr_type(&mut self) -> PResult<Type> {
         let lo = self.token.span;
         self.eat_and()?;
@@ -337,6 +367,8 @@ impl<'a> Parser<'a> {
         Ok(Type { kind, span })
     }
 
+    /// Parses array type expression ('[type ; expr]')
+    /// self.token = '['
     fn parse_arr_type(&mut self) -> PResult<Type> {
         let open = self.token.span;
         self.bump(); // '['
@@ -348,6 +380,8 @@ impl<'a> Parser<'a> {
         Ok(Type::new_arr(ty, expr, span))
     }
 
+    /// Parses 'expr AS type'
+    // lhs = expr, self.token = 'as'
     fn parse_as_expr(&mut self, lhs: Expr) -> PResult<Expr> {
         let lo = self.token.span;
         self.bump(); // 'as'

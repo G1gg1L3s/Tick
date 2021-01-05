@@ -155,7 +155,7 @@ impl<'a> Visitor<()> for DebugFormatter<'a> {
         self.indent -= 1;
     }
 
-    fn visit_type_ident(&mut self, tk: &Token, span: Span) -> () {
+    fn visit_type_ident(&mut self, _: &Token, span: Span) -> () {
         let value = span.extract(self.src);
         let indent = self.indent();
         println!("{:indent$}{}", "", value, indent = indent);

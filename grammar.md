@@ -12,7 +12,7 @@ This is mainly stolen from the Rust.
 | `as`                         | left to right |
 | `*` `/` `%`                  | left to right |
 | `+` `-`                      | left to right |
-| `==` `!=` `<` `>` `<=` `>=`  | ??            |
+| `==` `!=` `<` `>` `<=` `>=`  | left to right |
 | `&&`                         | left to right |
 | `||`                         | left to right |
 | `=`                          | right to left |
