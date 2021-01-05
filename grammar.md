@@ -6,7 +6,6 @@ This is mainly stolen from the Rust.
 
 | Operator/Expression          | Associativity |
 |------------------------------|---------------|
-| Method calls                 |               |
 | Field Expressions            | left to right |
 | fn calls, array indexing     |               |
 | Unary `-` `@` `!` `&` `&mut` |               |
@@ -50,7 +49,6 @@ StructlessExpressionWithoutBlock:
     | GroupedExpression
     | ArrayExpression
     | IndexExpression
-    | EnumExpression
     | CallExpression
     | FieldExpression
     | ContinueExpression
@@ -63,12 +61,11 @@ ExpressionWithBlock:
     | IfExpression
 
 BlockExpression:
-    {
-        Statements?
-    }
+    { Statements? }
 
 Statements:
-    Statement+
+    Statement+ ExpressionWithoutBlock
+    | ExpressionWithoutBlock
 
 Statement:
     ;
@@ -180,7 +177,7 @@ BreakExpression:
 
 IfExpression:
    if StructlessExpression BlockExpression
-   (else ( BlockExpression | IfExpression )?
+   (else ( BlockExpression | IfExpression ))?
 
 ReturnExpression:
    return Expression?
@@ -197,7 +194,6 @@ Item:
     | TypeAlias
     | Struct
     | Enumeration
-    | Union
     | ConstantItem
     | StaticItem
 
@@ -236,15 +232,31 @@ EnumItems:
 EnumItem:
    IDENTIFIER
 
-Union:
-    union IDENTIFIER { StructFields }
-
 ConstantItem:
    const IDENTIFIER : Type = Expression ;
 
 StaticItem:
    static mut? IDENTIFIER : Type = Expression ;
 
+
+Type:
+    IDENTIFIER
+    | PointerType
+    | NeverType
+    | ArrayType
+    | VoidType
+
+PointerType:
+    & mut? Type
+
+NeverType:
+    !
+
+ArrayType:
+    [Type ; Expression]
+
+VoidType:
+    ()
 
 ```
 
