@@ -16,6 +16,7 @@ pub trait Visitor<T> {
             ExprKind::Break => self.visit_break(span),
             ExprKind::Continue => self.visit_continue(span),
             ExprKind::Call(ref func, ref params) => self.visit_call(func, params, span),
+            ExprKind::As(ref lhs, ref ty) => self.visit_as(lhs, ty, span),
         }
     }
     fn visit_lit(&mut self, tk: &Token, span: Span) -> T;
@@ -29,6 +30,23 @@ pub trait Visitor<T> {
     fn visit_break(&mut self, span: Span) -> T;
     fn visit_continue(&mut self, span: Span) -> T;
     fn visit_call(&mut self, func: &Expr, params: &[Expr], span: Span) -> T;
+    fn visit_as(&mut self, lhs: &Expr, ty: &Type, span: Span) -> T;
+
+    fn visit_type(&mut self, ty: &Type) -> T {
+        let span = ty.span;
+        match ty.kind {
+            TypeKind::Ident(tk) => self.visit_type_ident(&tk, span),
+            TypeKind::Pointer(mutab, ref ty) => self.visit_type_ptr(mutab, ty, span),
+            TypeKind::Never => self.visit_type_never(span),
+            TypeKind::Void => self.visit_type_void(span),
+            TypeKind::ArrayType(ref ty, ref expr) => self.visit_type_arr(ty, expr, span),
+        }
+    }
+    fn visit_type_ident(&mut self, tk: &Token, span: Span) -> T;
+    fn visit_type_ptr(&mut self, mutab: Mutability, ty: &Type, span: Span) -> T;
+    fn visit_type_never(&mut self, span: Span) -> T;
+    fn visit_type_void(&mut self, span: Span) -> T;
+    fn visit_type_arr(&mut self, ty: &Type, expr: &Expr, span: Span) -> T;
 }
 
 pub struct DebugFormatter<'a> {
@@ -134,6 +152,40 @@ impl<'a> Visitor<()> for DebugFormatter<'a> {
         self.indent += 1;
         self.visit_expr(func);
         params.iter().for_each(|expr| self.visit_expr(expr));
+        self.indent -= 1;
+    }
+
+    fn visit_type_ident(&mut self, tk: &Token, span: Span) -> () {
+        let value = span.extract(self.src);
+        let indent = self.indent();
+        println!("{:indent$}{}", "", value, indent = indent);
+    }
+    fn visit_type_ptr(&mut self, mutab: Mutability, ty: &Type, _: Span) -> () {
+        println!("{:indent$}{:?}:", "", mutab, indent = self.indent());
+        self.indent += 1;
+        self.visit_type(ty);
+        self.indent -= 1;
+    }
+
+    fn visit_type_never(&mut self, _: Span) -> () {
+        println!("{:indent$} !", "", indent = self.indent());
+    }
+
+    fn visit_type_void(&mut self, _: Span) -> () {
+        println!("{:indent$} ()", "", indent = self.indent());
+    }
+
+    fn visit_type_arr(&mut self, ty: &Type, expr: &Expr, _: Span) -> () {
+        println!("{:indent$}ARRAY_TYPE", "", indent = self.indent());
+        self.visit_type(ty);
+        self.visit_expr(expr);
+    }
+
+    fn visit_as(&mut self, lhs: &Expr, ty: &Type, _: Span) -> () {
+        println!("{:indent$}AS", "", indent = self.indent());
+        self.indent += 1;
+        self.visit_expr(lhs);
+        self.visit_type(ty);
         self.indent -= 1;
     }
 }
