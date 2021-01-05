@@ -1,4 +1,4 @@
-use super::ast::*;
+use super::{ast::*, span::{self, Span}};
 use super::error::PError;
 use super::lexer::{Token, TokenKind};
 
@@ -40,7 +40,7 @@ impl TokenKind {
             TokenKind::Plus | TokenKind::Minus => ADD,
             TokenKind::Star | TokenKind::Slash | TokenKind::Percent => MUL,
             TokenKind::Dot => FIELD,
-            TokenKind::OpenSquare => CALL,
+            TokenKind::OpenSquare | TokenKind::OpenParen => CALL,
             _ => (0, 0),
         }
     }
@@ -193,6 +193,7 @@ impl<'a> Parser<'a> {
             TokenKind::GE => self.parse_bin(BinOp::Ge, lhs, right_prec),
             TokenKind::BangEq => self.parse_bin(BinOp::Ne, lhs, right_prec),
             TokenKind::Eq => self.parse_bin(BinOp::Assign, lhs, right_prec),
+            TokenKind::OpenParen => self.parse_call(lhs),
 
             TokenKind::Dot => self.parse_field(lhs),
             TokenKind::OpenSquare => self.parse_index(lhs),
@@ -212,6 +213,45 @@ impl<'a> Parser<'a> {
         let field = self.consume(TokenKind::Ident, "identifier after dot expression")?;
         let span = lhs.span.to(field.span);
         Ok(Expr::new_field(span, lhs, field))
+    }
+
+    fn parse_call(&mut self, func: Expr) -> PResult<Expr> {
+        let lo = self.token.span;
+        self.bump(); // '('
+        let (params, hi) = self.parse_comma_list_expr(lo, TokenKind::CloseParen)?;
+        let span = lo.to(hi);
+        Ok(Expr::new_call(func, params, span))
+    }
+
+    fn parse_comma_list_expr(&mut self, mut span: Span, delim: TokenKind) -> PResult<(Vec<Expr>, Span)> {
+        let mut res = Vec::new();
+
+        if !self.token.is(delim) {
+            loop {
+                let expr = self.parse_expr()?;
+                span.grow(expr.span);
+                res.push(expr);
+                match self.token.kind {
+                    TokenKind::Comma => {
+                        self.bump();
+                        // Maybe the last comma was the trailling comma
+                        if self.token.is(delim) {
+                            break;
+                        }
+                    },
+                    del if del == delim => { break },
+                    _ => return Err(PError::new("Expect ',' or delimeter", self.token.span)),
+                }
+
+            }
+        }
+        span.grow(self.token.span);
+        self.bump();
+        return Ok((res, span));
+    }
+
+    fn lookahead(&self) -> Option<&Token> {
+        self.tokens.iter().rev().nth(1)
     }
 
     fn parse_grouping(&mut self) -> PResult<Expr> {

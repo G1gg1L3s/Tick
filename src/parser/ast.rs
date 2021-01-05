@@ -70,6 +70,11 @@ pub enum ExprKind {
     Break,
     /// A `continue` in loop
     Continue,
+    /// A function call
+    ///
+    /// The first field resolves to the function itself,
+    /// and the second field is the list of arguments.
+    Call(Box<Expr>, Vec<Expr>),
 }
 
 #[derive(Debug)]
@@ -135,17 +140,10 @@ impl Expr {
         }
     }
 
-    pub fn new_break(span: Span) -> Self {
+    pub fn new_call(func: Expr, params: Vec<Expr>, span: Span) -> Self {
         Self {
             span,
-            kind: ExprKind::Break,
-        }
-    }
-
-    pub fn new_continue(span: Span) -> Self {
-        Self {
-            span,
-            kind: ExprKind::Continue,
+            kind: ExprKind::Call(Box::new(func), params),
         }
     }
 }

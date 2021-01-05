@@ -15,6 +15,7 @@ pub trait Visitor<T> {
             ExprKind::Ret(ref expr) => self.visit_ret(expr.as_ref().map(Box::as_ref), span),
             ExprKind::Break => self.visit_break(span),
             ExprKind::Continue => self.visit_continue(span),
+            ExprKind::Call(ref func, ref params) => self.visit_call(func, params, span),
         }
     }
     fn visit_lit(&mut self, tk: &Token, span: Span) -> T;
@@ -27,6 +28,7 @@ pub trait Visitor<T> {
     fn visit_ret(&mut self, expr: Option<&Expr>, span: Span) -> T;
     fn visit_break(&mut self, span: Span) -> T;
     fn visit_continue(&mut self, span: Span) -> T;
+    fn visit_call(&mut self, func: &Expr, params: &[Expr], span: Span) -> T;
 }
 
 pub struct DebugFormatter<'a> {
@@ -125,5 +127,13 @@ impl<'a> Visitor<()> for DebugFormatter<'a> {
 
     fn visit_continue(&mut self, _: Span) -> () {
         println!("{:indent$}CONTINUE", "", indent = self.indent());
+    }
+
+    fn visit_call(&mut self, func: &Expr, params: &[Expr], _: Span) -> () {
+        println!("{:indent$}CALL:", "", indent = self.indent());
+        self.indent += 1;
+        self.visit_expr(func);
+        params.iter().for_each(|expr| self.visit_expr(expr));
+        self.indent -= 1;
     }
 }
