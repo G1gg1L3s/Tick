@@ -75,11 +75,33 @@ pub enum ExprKind {
     /// The first field resolves to the function itself,
     /// and the second field is the list of arguments.
     Call(Box<Expr>, Vec<Expr>),
+    /// An `as` expression
+    As(Box<Expr>, Box<Type>),
 }
 
 #[derive(Debug)]
 pub struct Expr {
     pub kind: ExprKind,
+    pub span: Span,
+}
+
+#[derive(Debug)]
+pub enum TypeKind {
+    /// Typename like `i32` or `Point`
+    Ident(Token),
+    /// A pointer `& mut? Type`
+    Pointer(Mutability, Box<Type>),
+    /// The never type (`!`).
+    Never,
+    /// The void type (`()`).
+    Void,
+    /// A fixed length array (`[T; n]`).
+    ArrayType(Box<Type>, Box<Expr>),
+}
+
+#[derive(Debug)]
+pub struct Type {
+    pub kind: TypeKind,
     pub span: Span,
 }
 
@@ -144,6 +166,13 @@ impl Expr {
         Self {
             span,
             kind: ExprKind::Call(Box::new(func), params),
+        }
+    }
+
+    pub fn new_as(lhs: Expr, ty: Type, span: Span) -> Self {
+        Self {
+            span,
+            kind: ExprKind::As(Box::new(lhs), Box::new(ty)),
         }
     }
 }
