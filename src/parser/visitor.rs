@@ -56,11 +56,15 @@ pub trait Visitor<T> {
         match item.kind {
             ItemKind::TypeAlias(ref ty) => self.visit_type_item(ident, ty, span),
             ItemKind::Const(ref ty, ref expr) => self.visit_const_item(ident, ty, expr),
+            ItemKind::Static(mutab, ref ty, ref expr) => {
+                self.visit_static_item(ident, mutab, ty, expr)
+            }
         }
     }
 
     fn visit_type_item(&mut self, ident: &Token, ty: &Type, span: Span) -> T;
     fn visit_const_item(&mut self, ident: &Token, ty: &Type, expr: &Expr) -> T;
+    fn visit_static_item(&mut self, ident: &Token, mutab: Mutability, ty: &Type, expr: &Expr) -> T;
 }
 
 pub struct DebugFormatter<'a> {
@@ -222,6 +226,26 @@ impl<'a> Visitor<()> for DebugFormatter<'a> {
 
     fn visit_const_item(&mut self, ident: &Token, ty: &Type, expr: &Expr) -> () {
         println!("{:indent$}CONST_ITEM", "", indent = self.indent());
+        self.indent += 1;
+        self.visit_lit(ident, ident.span);
+        self.visit_type(ty);
+        self.visit_expr(expr);
+        self.indent -= 1;
+    }
+
+    fn visit_static_item(
+        &mut self,
+        ident: &Token,
+        mutab: Mutability,
+        ty: &Type,
+        expr: &Expr,
+    ) -> () {
+        println!(
+            "{:indent$}{:?}_STATIC_ITEM",
+            "",
+            mutab,
+            indent = self.indent()
+        );
         self.indent += 1;
         self.visit_lit(ident, ident.span);
         self.visit_type(ty);

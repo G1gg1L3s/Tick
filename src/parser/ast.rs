@@ -111,6 +111,7 @@ pub struct Type {
 pub enum ItemKind {
     TypeAlias(Box<Type>),
     Const(Box<Type>, Box<Expr>),
+    Static(Mutability, Box<Type>, Box<Expr>),
 }
 
 #[derive(Debug)]

@@ -410,6 +410,7 @@ impl<'a> Parser<'a> {
         match self.token.kind {
             TokenKind::Type => self.parse_type_item(),
             TokenKind::Const => self.parse_const_item(),
+            TokenKind::Static => self.parse_static_item(),
             _ => Err(PError::new("Expect item", self.token.span)),
         }
     }
@@ -431,20 +432,48 @@ impl<'a> Parser<'a> {
     }
 
     /// Parses const item ('const IDENTIFIER: Type = Expr ;')
+    /// self.token = 'const'
     fn parse_const_item(&mut self) -> PResult<Item> {
         let lo = self.token.span;
         self.bump(); // 'const'
         let ident = self.consume(TokenKind::Ident, "identifier in const item")?;
-        self.consume(TokenKind::Colon, "':' after identifier in const item")?;
-        let ty = self.parse_type()?;
-        self.consume(TokenKind::Eq, "=")?;
-        let expr = self.parse_expr()?;
+        let (ty, expr) = self.parse_anon_item()?;
         let semi = self.consume(TokenKind::Semi, "';' after item")?;
         let span = lo.to(semi.span);
         Ok(Item {
             ident,
             span,
             kind: ItemKind::Const(ty.into(), expr.into()),
+        })
+    }
+
+    /// Parses ': type = expr'
+    fn parse_anon_item(&mut self) -> PResult<(Type, Expr)> {
+        self.consume(TokenKind::Colon, "':'")?;
+        let ty = self.parse_type()?;
+        self.consume(TokenKind::Eq, "=")?;
+        let expr = self.parse_expr()?;
+        Ok((ty, expr))
+    }
+
+    /// Parses static item ('static mut? IDENTIFIER: Type = Expr ;')
+    /// self.token = 'static'
+    fn parse_static_item(&mut self) -> PResult<Item> {
+        let lo = self.token.span;
+        self.bump(); // 'static'
+        let mutab = if self.eat(TokenKind::Mut) {
+            Mutability::Mut
+        } else {
+            Mutability::Const
+        };
+        let ident = self.consume(TokenKind::Ident, "identifier in static item")?;
+        let (ty, expr) = self.parse_anon_item()?;
+        let semi = self.consume(TokenKind::Semi, "';' after item")?;
+        let span = lo.to(semi.span);
+        Ok(Item {
+            ident,
+            span,
+            kind: ItemKind::Static(mutab, ty.into(), expr.into()),
         })
     }
 }
