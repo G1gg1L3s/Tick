@@ -73,7 +73,7 @@ impl<'a> Parser<'a> {
     }
 
     pub fn is_end(&self) -> bool {
-        self.tokens.is_empty()
+        self.tokens.is_empty() && self.token.is(TokenKind::EOF)
     }
 
     pub fn bump(&mut self) {
@@ -100,9 +100,14 @@ impl<'a> Parser<'a> {
     }
 
     /// Entry point of parser. For now, parses only expressions
-    pub fn parse(mut self) -> PResult<Expr> {
+    pub fn parse(mut self) -> PResult<Vec<Item>> {
         self.bump();
-        self.parse_expr()
+        let mut items = Vec::new();
+        while !self.is_end() {
+            let item = self.parse_item()?;
+            items.push(item);
+        }
+        Ok(items)
     }
 
     fn parse_expr(&mut self) -> PResult<Expr> {
@@ -398,5 +403,29 @@ impl<'a> Parser<'a> {
         let ty = self.parse_type()?;
         let span = lo.to(ty.span);
         Ok(Expr::new_as(lhs, ty, span))
+    }
+
+    /// Dispather for item parsing
+    fn parse_item(&mut self) -> PResult<Item> {
+        match self.token.kind {
+            TokenKind::Type => self.parse_type_item(),
+            _ => Err(PError::new("Expect item", self.token.span)),
+        }
+    }
+
+    /// Parses type alias item ('type IDENTIFIER = Type ;')
+    fn parse_type_item(&mut self) -> PResult<Item> {
+        let lo = self.token.span;
+        self.bump(); // 'type'
+        let ident = self.consume(TokenKind::Ident, "identifier in type item")?;
+        self.consume(TokenKind::Eq, "'=' after identifier in type item")?;
+        let ty = self.parse_type()?;
+        let semi = self.consume(TokenKind::Semi, "';' after type item")?;
+        let span = lo.to(semi.span);
+        Ok(Item {
+            ident,
+            span,
+            kind: ItemKind::TypeAlias(ty.into()),
+        })
     }
 }

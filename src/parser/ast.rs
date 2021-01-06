@@ -107,6 +107,18 @@ pub struct Type {
     pub span: Span,
 }
 
+#[derive(Debug)]
+pub enum ItemKind {
+    TypeAlias(Box<Type>),
+}
+
+#[derive(Debug)]
+pub struct Item {
+    pub ident: Token,
+    pub kind: ItemKind,
+    pub span: Span,
+}
+
 impl Expr {
     pub fn new_lit(tk: Token, span: Span) -> Self {
         Self {

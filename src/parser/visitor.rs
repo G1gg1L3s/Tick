@@ -49,6 +49,16 @@ pub trait Visitor<T> {
     fn visit_type_never(&mut self, span: Span) -> T;
     fn visit_type_void(&mut self, span: Span) -> T;
     fn visit_type_arr(&mut self, ty: &Type, expr: &Expr, span: Span) -> T;
+
+    fn visit_item(&mut self, item: &Item) -> T {
+        let span = item.span;
+        let ident = &item.ident;
+        match item.kind {
+            ItemKind::TypeAlias(ref ty) => self.visit_type_item(ident, ty, span),
+        }
+    }
+
+    fn visit_type_item(&mut self, ident: &Token, ty: &Type, span: Span) -> T;
 }
 
 pub struct DebugFormatter<'a> {
@@ -170,7 +180,7 @@ impl<'a> Visitor<()> for DebugFormatter<'a> {
         println!("{:indent$}{}", "", value, indent = indent);
     }
     fn visit_type_ptr(&mut self, mutab: Mutability, ty: &Type, _: Span) -> () {
-        println!("{:indent$}{:?}:", "", mutab, indent = self.indent());
+        println!("{:indent$}{:?}_PTR:", "", mutab, indent = self.indent());
         self.indent += 1;
         self.visit_type(ty);
         self.indent -= 1;
@@ -196,6 +206,14 @@ impl<'a> Visitor<()> for DebugFormatter<'a> {
         println!("{:indent$}AS", "", indent = self.indent());
         self.indent += 1;
         self.visit_expr(lhs);
+        self.visit_type(ty);
+        self.indent -= 1;
+    }
+
+    fn visit_type_item(&mut self, ident: &Token, ty: &Type, _: Span) -> () {
+        println!("{:indent$}TYPE_ALIAS", "", indent = self.indent());
+        self.indent += 1;
+        self.visit_lit(ident, ident.span);
         self.visit_type(ty);
         self.indent -= 1;
     }
