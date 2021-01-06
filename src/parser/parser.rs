@@ -127,7 +127,6 @@ impl<'a> Parser<'a> {
         Ok(Expr::new_un(span, op, expr))
     }
 
-
     /// Parses return expr
     /// self.token 'return' keyword
     fn parse_return(&mut self) -> PResult<Expr> {
@@ -170,6 +169,7 @@ impl<'a> Parser<'a> {
             TokenKind::Return => self.parse_return(),
             TokenKind::Break => self.parse_one_token_expr(ExprKind::Break),
             TokenKind::Continue => self.parse_one_token_expr(ExprKind::Continue),
+            TokenKind::OpenSquare => self.parse_array_expr(),
             _ => Err(PError::new("Expect expression", self.token.span)),
         }
     }
@@ -210,7 +210,7 @@ impl<'a> Parser<'a> {
 
             TokenKind::Dot => self.parse_field(lhs),
             TokenKind::OpenSquare => self.parse_index(lhs),
-            _ => unimplemented!(),
+            _ => unreachable!(),
         }
     }
 
@@ -230,6 +230,16 @@ impl<'a> Parser<'a> {
         let field = self.consume(TokenKind::Ident, "identifier after dot expression")?;
         let span = lhs.span.to(field.span);
         Ok(Expr::new_field(span, lhs, field))
+    }
+
+    /// Parses array expression '[a, b, c]'
+    /// self.token = '['
+    fn parse_array_expr(&mut self) -> PResult<Expr> {
+        let lo = self.token.span;
+        self.bump(); // '['
+        let (exprs, hi) = self.parse_comma_list_expr(lo, TokenKind::CloseSquare)?;
+        let span = lo.to(hi);
+        Ok(Expr::new_array(span, exprs))
     }
 
     /// Parses call expression 'a(b)'

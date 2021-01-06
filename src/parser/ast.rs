@@ -77,6 +77,8 @@ pub enum ExprKind {
     Call(Box<Expr>, Vec<Expr>),
     /// An `as` expression
     As(Box<Expr>, Box<Type>),
+    /// An array (`[a, b, c, d]`)
+    Array(Vec<Expr>),
 }
 
 #[derive(Debug)]
@@ -173,6 +175,13 @@ impl Expr {
         Self {
             span,
             kind: ExprKind::As(Box::new(lhs), Box::new(ty)),
+        }
+    }
+
+    pub fn new_array(span: Span, exprs: Vec<Expr>) -> Self {
+        Self {
+            span,
+            kind: ExprKind::Array(exprs),
         }
     }
 }

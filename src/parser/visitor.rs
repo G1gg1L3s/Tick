@@ -17,6 +17,7 @@ pub trait Visitor<T> {
             ExprKind::Continue => self.visit_continue(span),
             ExprKind::Call(ref func, ref params) => self.visit_call(func, params, span),
             ExprKind::As(ref lhs, ref ty) => self.visit_as(lhs, ty, span),
+            ExprKind::Array(ref exprs) => self.visit_array(exprs, span),
         }
     }
     fn visit_lit(&mut self, tk: &Token, span: Span) -> T;
@@ -31,6 +32,7 @@ pub trait Visitor<T> {
     fn visit_continue(&mut self, span: Span) -> T;
     fn visit_call(&mut self, func: &Expr, params: &[Expr], span: Span) -> T;
     fn visit_as(&mut self, lhs: &Expr, ty: &Type, span: Span) -> T;
+    fn visit_array(&mut self, exprs: &[Expr], span: Span) -> T;
 
     fn visit_type(&mut self, ty: &Type) -> T {
         let span = ty.span;
@@ -152,6 +154,13 @@ impl<'a> Visitor<()> for DebugFormatter<'a> {
         self.indent += 1;
         self.visit_expr(func);
         params.iter().for_each(|expr| self.visit_expr(expr));
+        self.indent -= 1;
+    }
+
+    fn visit_array(&mut self, exprs: &[Expr], _: Span) -> () {
+        println!("{:indent$}ARRAY:", "", indent = self.indent());
+        self.indent += 1;
+        exprs.iter().for_each(|expr| self.visit_expr(expr));
         self.indent -= 1;
     }
 
