@@ -55,10 +55,12 @@ pub trait Visitor<T> {
         let ident = &item.ident;
         match item.kind {
             ItemKind::TypeAlias(ref ty) => self.visit_type_item(ident, ty, span),
+            ItemKind::Const(ref ty, ref expr) => self.visit_const_item(ident, ty, expr),
         }
     }
 
     fn visit_type_item(&mut self, ident: &Token, ty: &Type, span: Span) -> T;
+    fn visit_const_item(&mut self, ident: &Token, ty: &Type, expr: &Expr) -> T;
 }
 
 pub struct DebugFormatter<'a> {
@@ -215,6 +217,15 @@ impl<'a> Visitor<()> for DebugFormatter<'a> {
         self.indent += 1;
         self.visit_lit(ident, ident.span);
         self.visit_type(ty);
+        self.indent -= 1;
+    }
+
+    fn visit_const_item(&mut self, ident: &Token, ty: &Type, expr: &Expr) -> () {
+        println!("{:indent$}CONST_ITEM", "", indent = self.indent());
+        self.indent += 1;
+        self.visit_lit(ident, ident.span);
+        self.visit_type(ty);
+        self.visit_expr(expr);
         self.indent -= 1;
     }
 }

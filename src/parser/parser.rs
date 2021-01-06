@@ -409,6 +409,7 @@ impl<'a> Parser<'a> {
     fn parse_item(&mut self) -> PResult<Item> {
         match self.token.kind {
             TokenKind::Type => self.parse_type_item(),
+            TokenKind::Const => self.parse_const_item(),
             _ => Err(PError::new("Expect item", self.token.span)),
         }
     }
@@ -426,6 +427,24 @@ impl<'a> Parser<'a> {
             ident,
             span,
             kind: ItemKind::TypeAlias(ty.into()),
+        })
+    }
+
+    /// Parses const item ('const IDENTIFIER: Type = Expr ;')
+    fn parse_const_item(&mut self) -> PResult<Item> {
+        let lo = self.token.span;
+        self.bump(); // 'const'
+        let ident = self.consume(TokenKind::Ident, "identifier in const item")?;
+        self.consume(TokenKind::Colon, "':' after identifier in const item")?;
+        let ty = self.parse_type()?;
+        self.consume(TokenKind::Eq, "=")?;
+        let expr = self.parse_expr()?;
+        let semi = self.consume(TokenKind::Semi, "';' after item")?;
+        let span = lo.to(semi.span);
+        Ok(Item {
+            ident,
+            span,
+            kind: ItemKind::Const(ty.into(), expr.into()),
         })
     }
 }
