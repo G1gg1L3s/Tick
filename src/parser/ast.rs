@@ -112,6 +112,7 @@ pub enum ItemKind {
     TypeAlias(Box<Type>),
     Const(Box<Type>, Box<Expr>),
     Static(Mutability, Box<Type>, Box<Expr>),
+    Enum(Vec<Token>),
 }
 
 #[derive(Debug)]

@@ -77,7 +77,8 @@ impl<'a> Parser<'a> {
     }
 
     pub fn bump(&mut self) {
-        self.token = self.tokens.pop().unwrap_or(Token::eof());
+        let old = self.token;
+        self.token = self.tokens.pop().unwrap_or(old);
     }
 
     fn consume(&mut self, kind: TokenKind, expect: &str) -> PResult<Token> {
@@ -242,8 +243,9 @@ impl<'a> Parser<'a> {
     fn parse_array_expr(&mut self) -> PResult<Expr> {
         let lo = self.token.span;
         self.bump(); // '['
-        let (exprs, hi) = self.parse_comma_list_expr(lo, TokenKind::CloseSquare)?;
-        let span = lo.to(hi);
+        let exprs = self.parse_comma_list_expr(TokenKind::CloseSquare)?;
+        let close = self.consume(TokenKind::CloseSquare, "']' after list")?;
+        let span = lo.to(close.span);
         Ok(Expr::new_array(span, exprs))
     }
 
@@ -252,41 +254,14 @@ impl<'a> Parser<'a> {
     fn parse_call(&mut self, func: Expr) -> PResult<Expr> {
         let lo = self.token.span;
         self.bump(); // '('
-        let (params, hi) = self.parse_comma_list_expr(lo, TokenKind::CloseParen)?;
-        let span = lo.to(hi);
+        let params = self.parse_comma_list_expr(TokenKind::CloseParen)?;
+        let close = self.consume(TokenKind::CloseParen, "')' after function call")?;
+        let span = lo.to(close.span);
         Ok(Expr::new_call(func, params, span))
     }
-
-    /// Parses list of expression possibly with trailling comma and delimeter = delim
-    /// Open delimeter is already consumed
-    fn parse_comma_list_expr(
-        &mut self,
-        mut span: Span,
-        delim: TokenKind,
-    ) -> PResult<(Vec<Expr>, Span)> {
-        let mut res = Vec::new();
-
-        if !self.token.is(delim) {
-            loop {
-                let expr = self.parse_expr()?;
-                span.grow(expr.span);
-                res.push(expr);
-                match self.token.kind {
-                    TokenKind::Comma => {
-                        self.bump();
-                        // Maybe the last comma was the trailling comma
-                        if self.token.is(delim) {
-                            break;
-                        }
-                    }
-                    del if del == delim => break,
-                    _ => return Err(PError::new("Expect ',' or delimeter", self.token.span)),
-                }
-            }
-        }
-        span.grow(self.token.span);
-        self.bump();
-        return Ok((res, span));
+    /// Same as parse_comma_list but specifically for list of expressions
+    fn parse_comma_list_expr(&mut self, delim: TokenKind) -> PResult<Vec<Expr>> {
+        self.parse_comma_list(delim, |this| this.parse_expr())
     }
 
     /// Parses expression in parentheses
@@ -411,6 +386,7 @@ impl<'a> Parser<'a> {
             TokenKind::Type => self.parse_type_item(),
             TokenKind::Const => self.parse_const_item(),
             TokenKind::Static => self.parse_static_item(),
+            TokenKind::Enum => self.parse_enum_item(),
             _ => Err(PError::new("Expect item", self.token.span)),
         }
     }
@@ -475,5 +451,53 @@ impl<'a> Parser<'a> {
             span,
             kind: ItemKind::Static(mutab, ty.into(), expr.into()),
         })
+    }
+
+    fn parse_enum_item(&mut self) -> PResult<Item> {
+        use TokenKind::{CloseBrace, Ident, OpenBrace};
+        let lo = self.token.span;
+        self.bump(); // 'enum'
+        let ident = self.consume(Ident, "name of enum")?;
+        self.consume(OpenBrace, "'{' after enum keyword")?;
+        let enums = self.parse_comma_list(CloseBrace, |this| {
+            this.consume(Ident, "Identifier in enum item")
+        })?;
+        let close = self.consume(CloseBrace, "'}'")?;
+        let span = lo.to(close.span);
+        Ok(Item {
+            ident,
+            span,
+            kind: ItemKind::Enum(enums),
+        })
+    }
+
+    /// Parses comma separated list (maybe with trailling comma) with callback
+    /// Open delimeter should be consumed
+    /// Doesn't consume the close delimeter
+    fn parse_comma_list<T>(
+        &mut self,
+        delim: TokenKind,
+        mut f: impl FnMut(&mut Parser<'a>) -> PResult<T>,
+    ) -> PResult<Vec<T>> {
+        let mut res = Vec::new();
+
+        if !self.token.is(delim) {
+            loop {
+                let next = f(self)?;
+                res.push(next);
+                match self.token.kind {
+                    TokenKind::Comma => {
+                        self.bump();
+                        // Maybe the last comma was the trailling comma
+                        if self.token.is(delim) {
+                            break;
+                        }
+                    }
+                    del if del == delim => break,
+                    _ => return Err(PError::new("Expect ',' or delimeter", self.token.span)),
+                }
+            }
+        }
+        Ok(res)
     }
 }

@@ -52,11 +52,11 @@ impl<'a> Lexer<'a> {
                     self.errors.push(PError::new(msg, span));
                 }
                 TokenKind::Whitespace => {}
-                TokenKind::EOF => {
-                    break;
-                }
                 kind => {
                     self.tokens.push(Token { span, kind });
+                    if kind == TokenKind::EOF {
+                        break;
+                    }
                 }
             }
             start = end;

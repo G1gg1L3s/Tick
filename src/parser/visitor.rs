@@ -59,12 +59,14 @@ pub trait Visitor<T> {
             ItemKind::Static(mutab, ref ty, ref expr) => {
                 self.visit_static_item(ident, mutab, ty, expr)
             }
+            ItemKind::Enum(ref enums) => self.visit_enum(ident, enums),
         }
     }
 
     fn visit_type_item(&mut self, ident: &Token, ty: &Type, span: Span) -> T;
     fn visit_const_item(&mut self, ident: &Token, ty: &Type, expr: &Expr) -> T;
     fn visit_static_item(&mut self, ident: &Token, mutab: Mutability, ty: &Type, expr: &Expr) -> T;
+    fn visit_enum(&mut self, ident: &Token, enums: &[Token]) -> T;
 }
 
 pub struct DebugFormatter<'a> {
@@ -250,6 +252,17 @@ impl<'a> Visitor<()> for DebugFormatter<'a> {
         self.visit_lit(ident, ident.span);
         self.visit_type(ty);
         self.visit_expr(expr);
+        self.indent -= 1;
+    }
+
+    fn visit_enum(&mut self, ident: &Token, enums: &[Token]) -> () {
+        println!("{:indent$}ENUM", "", indent = self.indent());
+        self.indent += 1;
+        self.visit_lit(ident, ident.span);
+
+        enums
+            .iter()
+            .for_each(|item| self.visit_lit(item, item.span));
         self.indent -= 1;
     }
 }

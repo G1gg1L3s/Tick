@@ -38,4 +38,8 @@ impl Span {
     pub fn grow(&mut self, to: Self) {
         self.hi = to.hi;
     }
+
+    pub fn len(&self) -> usize {
+        self.hi as usize - self.lo as usize
+    }
 }
