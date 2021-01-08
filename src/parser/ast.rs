@@ -117,10 +117,15 @@ pub struct Type {
 
 #[derive(Debug)]
 pub enum ItemKind {
+    /// A type alias ('type IDENTIFIER = Type ;')
     TypeAlias(Box<Type>),
+    /// A const item ('const IDENTIFIER : Type = Expr ;')
     Const(Box<Type>, Box<Expr>),
+    /// A static item ('static mut? IDENTIFIER : Type = Expr ;')
     Static(Mutability, Box<Type>, Box<Expr>),
+    /// An enum definition ('enum IDENTITER { EnumItems* }')
     Enum(Vec<Token>),
+    /// A struct definition ('struct IDENTITER { StructFields* }')
     Struct(Vec<StructField>),
 }
 
@@ -140,9 +145,13 @@ pub struct StructField {
 
 #[derive(Debug)]
 pub enum StmtKind {
+    /// Trailing semicolon
     Empty,
+    /// Let statement ('let mut? Identifier = Expr ;')
     Let(Box<Local>),
+    /// Expression without semicolon
     Expr(Box<Expr>),
+    /// Expression with semicolon
     Semi(Box<Expr>),
 }
 
