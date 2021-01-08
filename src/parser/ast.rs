@@ -79,6 +79,8 @@ pub enum ExprKind {
     As(Box<Expr>, Box<Type>),
     /// An array (`[a, b, c, d]`)
     Array(Vec<Expr>),
+    /// Block ('{ expr* '})
+    Block(Box<Block>),
 }
 
 #[derive(Debug)]
@@ -128,6 +130,55 @@ pub struct StructField {
     pub ident: Token,
     pub ty: Type,
     pub span: Span,
+}
+
+#[derive(Debug)]
+pub enum StmtKind {
+    Empty,
+    Let(Box<Local>),
+    Expr(Box<Expr>),
+    Semi(Box<Expr>),
+}
+
+#[derive(Debug)]
+pub struct Local {
+    pub ident: Token,
+    pub ty: Option<Type>,
+    pub expr: Expr,
+    pub mutab: Mutability,
+}
+
+#[derive(Debug)]
+pub struct Stmt {
+    pub kind: StmtKind,
+    pub span: Span,
+}
+
+#[derive(Debug)]
+pub struct Block {
+    pub stmts: Vec<Stmt>,
+    pub span: Span,
+}
+
+impl Stmt {
+    pub fn new_let(
+        ident: Token,
+        ty: Option<Type>,
+        expr: Expr,
+        mutab: Mutability,
+        span: Span,
+    ) -> Self {
+        let local = Local {
+            ident,
+            ty,
+            expr,
+            mutab,
+        };
+        Self {
+            kind: StmtKind::Let(local.into()),
+            span,
+        }
+    }
 }
 
 impl Expr {

@@ -20,6 +20,7 @@ pub trait Visitor<T> {
             ExprKind::Call(ref func, ref params) => self.visit_call(func, params, span),
             ExprKind::As(ref lhs, ref ty) => self.visit_as(lhs, ty, span),
             ExprKind::Array(ref exprs) => self.visit_array(exprs, span),
+            ExprKind::Block(ref block) => self.visit_block(block),
         }
     }
     fn visit_lit(&mut self, tk: &Token, span: Span) -> T;
@@ -35,6 +36,7 @@ pub trait Visitor<T> {
     fn visit_call(&mut self, func: &Expr, params: &[Expr], span: Span) -> T;
     fn visit_as(&mut self, lhs: &Expr, ty: &Type, span: Span) -> T;
     fn visit_array(&mut self, exprs: &[Expr], span: Span) -> T;
+    fn visit_block(&mut self, block: &Block) -> T;
 
     fn visit_type(&mut self, ty: &Type) -> T {
         let span = ty.span;
@@ -71,6 +73,20 @@ pub trait Visitor<T> {
     fn visit_static_item(&mut self, ident: &Token, mutab: Mutability, ty: &Type, expr: &Expr) -> T;
     fn visit_enum(&mut self, ident: &Token, enums: &[Token]) -> T;
     fn visit_struct(&mut self, ident: &Token, fields: &[StructField]) -> T;
+
+    fn visit_stmt(&mut self, stmt: &Stmt) -> T {
+        match stmt.kind {
+            StmtKind::Let(ref local) => self.visit_let_stmt(local),
+            StmtKind::Empty => self.visit_empty_stmt(),
+            StmtKind::Expr(ref expr) => self.visit_expr_stmt(expr),
+            StmtKind::Semi(ref expr) => self.visit_semi_stmt(expr),
+        }
+    }
+
+    fn visit_empty_stmt(&mut self) -> T;
+    fn visit_let_stmt(&mut self, local: &Local) -> T;
+    fn visit_expr_stmt(&mut self, expr: &Expr) -> T;
+    fn visit_semi_stmt(&mut self, expr: &Expr) -> T;
 }
 
 pub struct DebugFormatter<'a> {
@@ -227,6 +243,42 @@ impl<'a> Visitor<()> for DebugFormatter<'a> {
         self.indent += 1;
         self.visit_expr(lhs);
         self.visit_type(ty);
+        self.indent -= 1;
+    }
+
+    fn visit_block(&mut self, block: &Block) -> () {
+        println!("{:indent$}BLOCK", "", indent = self.indent());
+        self.indent += 1;
+        block.stmts.iter().for_each(|s| self.visit_stmt(s));
+        self.indent -= 1;
+    }
+
+    fn visit_empty_stmt(&mut self) -> () {
+        println!("{:indent$}EMPTY", "", indent = self.indent());
+    }
+
+    fn visit_let_stmt(&mut self, local: &Local) -> () {
+        println!("{:indent$}LET", "", indent = self.indent());
+        self.indent += 1;
+        self.visit_lit(&local.ident, local.ident.span);
+        if let Some(ref ty) = local.ty {
+            self.visit_type(ty);
+        } else {
+            println!("{:indent$}DERIVE_TYPE", "", indent = self.indent());
+        }
+        self.visit_expr(&local.expr);
+        self.indent -= 1;
+    }
+    fn visit_expr_stmt(&mut self, expr: &Expr) -> () {
+        println!("{:indent$}EXPR_STMT", "", indent = self.indent());
+        self.indent += 1;
+        self.visit_expr(expr);
+        self.indent -= 1;
+    }
+    fn visit_semi_stmt(&mut self, expr: &Expr) -> () {
+        println!("{:indent$}SEMI_EXPR_STMT", "", indent = self.indent());
+        self.indent += 1;
+        self.visit_expr(expr);
         self.indent -= 1;
     }
 

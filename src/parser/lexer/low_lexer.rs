@@ -85,6 +85,7 @@ pub enum TokenKind {
     Return,
     Break,
     Continue,
+    Let,
 
     /// End of file
     EOF,
@@ -224,6 +225,7 @@ impl<'a> Lexer<'a> {
             "return" => TokenKind::Return,
             "break" => TokenKind::Break,
             "continue" => TokenKind::Continue,
+            "let" => TokenKind::Let,
             _ => TokenKind::Ident,
         }
     }

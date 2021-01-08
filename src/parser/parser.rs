@@ -176,6 +176,7 @@ impl<'a> Parser<'a> {
             TokenKind::Break => self.parse_one_token_expr(ExprKind::Break),
             TokenKind::Continue => self.parse_one_token_expr(ExprKind::Continue),
             TokenKind::OpenSquare => self.parse_array_expr(),
+            TokenKind::OpenBrace => self.parse_block_expr(),
             _ => Err(PError::new("Expect expression", self.token.span)),
         }
     }
@@ -530,5 +531,86 @@ impl<'a> Parser<'a> {
             }
         }
         Ok(res)
+    }
+
+    /// Parses block and wraps it into expression
+    pub fn parse_block_expr(&mut self) -> PResult<Expr> {
+        let block = self.parse_block()?;
+        let span = block.span;
+        let kind = ExprKind::Block(block.into());
+        Ok(Expr { span, kind })
+    }
+
+    /// Parses block '{ statement* }'
+    /// self.token = '{'
+    pub fn parse_block(&mut self) -> PResult<Block> {
+        let lo = self.token.span;
+        self.bump(); // '{'
+        let mut stmts = Vec::new();
+        while !self.token.is(TokenKind::CloseBrace) {
+            let stmt = self.parse_stmt()?;
+            stmts.push(stmt);
+        }
+        let span = lo.to(self.token.span);
+        self.consume(TokenKind::CloseBrace, "'}'")?;
+        Ok(Block { stmts, span })
+    }
+
+    /// Dispatch parsing of statement
+    pub fn parse_stmt(&mut self) -> PResult<Stmt> {
+        let lo = self.token.span;
+        match self.token.kind {
+            TokenKind::Let => self.parse_let_stmt(),
+            TokenKind::Semi => {
+                self.bump();
+                Ok(Stmt {
+                    kind: StmtKind::Empty,
+                    span: lo,
+                })
+            }
+            // Parse it as expression and wrap it into statement
+            _ => self.parse_expr_stmt(),
+        }
+    }
+
+    /// Parses let statement ('let mut? IDENTIFIER (: type)? = expr ;')
+    pub fn parse_let_stmt(&mut self) -> PResult<Stmt> {
+        let lo = self.token.span;
+        self.bump(); // 'let'
+        let mutab = if self.eat(TokenKind::Mut) {
+            Mutability::Mut
+        } else {
+            Mutability::Const
+        };
+        let ident = self.consume(TokenKind::Ident, "identifier in let expression")?;
+        let ty = if self.eat(TokenKind::Colon) {
+            Some(self.parse_type()?)
+        } else {
+            None
+        };
+        self.consume(TokenKind::Eq, "'='")?;
+        let expr = self.parse_expr()?;
+        let close = self.consume(TokenKind::Semi, "';'")?;
+        let span = lo.to(close.span);
+        Ok(Stmt::new_let(ident, ty, expr, mutab, span))
+    }
+
+    /// Parses expression and wraps it into statement with or without semicolon
+    pub fn parse_expr_stmt(&mut self) -> PResult<Stmt> {
+        let expr = self.parse_expr()?;
+        let lo = expr.span;
+        let (span, kind) = match self.token.kind {
+            TokenKind::Semi => {
+                let span = lo.to(self.token.span);
+                let kind = StmtKind::Semi(expr.into());
+                (span, kind)
+            }
+            TokenKind::CloseBrace => (lo, StmtKind::Expr(expr.into())),
+
+            _ => {
+                return Err(PError::new("Expect ';' or '}'", self.token.span));
+            }
+        };
+        Ok(Stmt { kind, span })
     }
 }
