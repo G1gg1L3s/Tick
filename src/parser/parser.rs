@@ -1,6 +1,6 @@
+use super::ast::*;
 use super::error::PError;
 use super::lexer::{Token, TokenKind};
-use super::{ast::*, span::Span};
 
 type PResult<T> = Result<T, PError>;
 
@@ -387,6 +387,8 @@ impl<'a> Parser<'a> {
             TokenKind::Const => self.parse_const_item(),
             TokenKind::Static => self.parse_static_item(),
             TokenKind::Enum => self.parse_enum_item(),
+            TokenKind::Import => unimplemented!(),
+            TokenKind::Struct => self.parse_struct_item(),
             _ => Err(PError::new("Expect item", self.token.span)),
         }
     }
@@ -453,6 +455,7 @@ impl<'a> Parser<'a> {
         })
     }
 
+    /// Parses enum item: 'enum IDENTIFIER { (IDENT,) * }'
     fn parse_enum_item(&mut self) -> PResult<Item> {
         use TokenKind::{CloseBrace, Ident, OpenBrace};
         let lo = self.token.span;
@@ -469,6 +472,34 @@ impl<'a> Parser<'a> {
             span,
             kind: ItemKind::Enum(enums),
         })
+    }
+
+    /// Parses struct item ('struct IDENTIFIER { (IDENTIFIER : TYPE , )* }')
+    /// self.token = 'struct'
+    fn parse_struct_item(&mut self) -> PResult<Item> {
+        let lo = self.token.span;
+        self.bump();
+        let ident = self.consume(TokenKind::Ident, "identifier")?;
+        self.consume(TokenKind::OpenBrace, "'{' after struct name")?;
+        let fields =
+            self.parse_comma_list(TokenKind::CloseBrace, |this| this.parse_struct_field())?;
+        let close = self.consume(TokenKind::CloseBrace, "'}' after struct fields definition")?;
+        let span = lo.to(close.span);
+        Ok(Item {
+            ident,
+            span,
+            kind: ItemKind::Struct(fields),
+        })
+    }
+
+    /// Parses 'ident : type'
+    fn parse_struct_field(&mut self) -> PResult<StructField> {
+        let ident = self.consume(TokenKind::Ident, "identifier")?;
+        let lo = ident.span;
+        self.consume(TokenKind::Colon, "':'")?;
+        let ty = self.parse_type()?;
+        let span = lo.to(ty.span);
+        Ok(StructField { ident, ty, span })
     }
 
     /// Parses comma separated list (maybe with trailling comma) with callback

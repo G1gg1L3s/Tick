@@ -113,12 +113,20 @@ pub enum ItemKind {
     Const(Box<Type>, Box<Expr>),
     Static(Mutability, Box<Type>, Box<Expr>),
     Enum(Vec<Token>),
+    Struct(Vec<StructField>),
 }
 
 #[derive(Debug)]
 pub struct Item {
     pub ident: Token,
     pub kind: ItemKind,
+    pub span: Span,
+}
+
+#[derive(Debug)]
+pub struct StructField {
+    pub ident: Token,
+    pub ty: Type,
     pub span: Span,
 }
 

@@ -1,3 +1,5 @@
+// Ugly visitor, just for debugging
+
 use super::ast::*;
 use super::{lexer::Token, span::Span};
 
@@ -60,6 +62,7 @@ pub trait Visitor<T> {
                 self.visit_static_item(ident, mutab, ty, expr)
             }
             ItemKind::Enum(ref enums) => self.visit_enum(ident, enums),
+            ItemKind::Struct(ref fields) => self.visit_struct(ident, fields),
         }
     }
 
@@ -67,6 +70,7 @@ pub trait Visitor<T> {
     fn visit_const_item(&mut self, ident: &Token, ty: &Type, expr: &Expr) -> T;
     fn visit_static_item(&mut self, ident: &Token, mutab: Mutability, ty: &Type, expr: &Expr) -> T;
     fn visit_enum(&mut self, ident: &Token, enums: &[Token]) -> T;
+    fn visit_struct(&mut self, ident: &Token, fields: &[StructField]) -> T;
 }
 
 pub struct DebugFormatter<'a> {
@@ -82,6 +86,14 @@ impl<'a> DebugFormatter<'a> {
     fn indent(&self) -> usize {
         const TAB_SIZE: usize = 4;
         self.indent * TAB_SIZE
+    }
+
+    fn visit_stuct_field(&mut self, field: &StructField) {
+        println!("{:indent$}STRUCT_FIELD:", "", indent = self.indent());
+        self.indent += 1;
+        self.visit_lit(&field.ident, field.ident.span);
+        self.visit_type(&field.ty);
+        self.indent -= 1;
     }
 }
 
@@ -263,6 +275,14 @@ impl<'a> Visitor<()> for DebugFormatter<'a> {
         enums
             .iter()
             .for_each(|item| self.visit_lit(item, item.span));
+        self.indent -= 1;
+    }
+
+    fn visit_struct(&mut self, ident: &Token, fields: &[StructField]) -> () {
+        println!("{:indent$}STRUCT_DECLARATION", "", indent = self.indent());
+        self.indent += 1;
+        self.visit_lit(ident, ident.span);
+        fields.iter().for_each(|f| self.visit_stuct_field(f));
         self.indent -= 1;
     }
 }
