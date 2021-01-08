@@ -21,6 +21,11 @@ pub trait Visitor<T> {
             ExprKind::As(ref lhs, ref ty) => self.visit_as(lhs, ty, span),
             ExprKind::Array(ref exprs) => self.visit_array(exprs, span),
             ExprKind::Block(ref block) => self.visit_block(block),
+            ExprKind::If(ref expr, ref block, ref elseb) => {
+                self.visit_if(expr, block, elseb.as_ref().map(Box::as_ref))
+            }
+            ExprKind::While(ref expr, ref block) => self.visit_while(expr, block),
+            ExprKind::Loop(ref block) => self.visit_loop(block),
         }
     }
     fn visit_lit(&mut self, tk: &Token, span: Span) -> T;
@@ -37,6 +42,9 @@ pub trait Visitor<T> {
     fn visit_as(&mut self, lhs: &Expr, ty: &Type, span: Span) -> T;
     fn visit_array(&mut self, exprs: &[Expr], span: Span) -> T;
     fn visit_block(&mut self, block: &Block) -> T;
+    fn visit_if(&mut self, expr: &Expr, block: &Block, elseblock: Option<&Block>) -> T;
+    fn visit_while(&mut self, expr: &Expr, block: &Block) -> T;
+    fn visit_loop(&mut self, block: &Block) -> T;
 
     fn visit_type(&mut self, ty: &Type) -> T {
         let span = ty.span;
@@ -250,6 +258,30 @@ impl<'a> Visitor<()> for DebugFormatter<'a> {
         println!("{:indent$}BLOCK", "", indent = self.indent());
         self.indent += 1;
         block.stmts.iter().for_each(|s| self.visit_stmt(s));
+        self.indent -= 1;
+    }
+
+    fn visit_if(&mut self, expr: &Expr, block: &Block, elseb: Option<&Block>) -> () {
+        println!("{:indent$}IF", "", indent = self.indent());
+        self.indent += 1;
+        self.visit_expr(expr);
+        self.visit_block(block);
+        elseb.iter().for_each(|&b| self.visit_block(b));
+        self.indent -= 1;
+    }
+
+    fn visit_while(&mut self, expr: &Expr, block: &Block) -> () {
+        println!("{:indent$}WHILE", "", indent = self.indent());
+        self.indent += 1;
+        self.visit_expr(expr);
+        self.visit_block(block);
+        self.indent -= 1;
+    }
+
+    fn visit_loop(&mut self, block: &Block) -> () {
+        println!("{:indent$}LOOP", "", indent = self.indent());
+        self.indent += 1;
+        self.visit_block(block);
         self.indent -= 1;
     }
 

@@ -73,7 +73,9 @@ pub enum TokenKind {
     // Keywords:
     As,
     If,
+    Else,
     While,
+    Loop,
     Fn,
     Struct,
     Import,
@@ -213,7 +215,9 @@ impl<'a> Lexer<'a> {
         match ident {
             "as" => TokenKind::As,
             "if" => TokenKind::If,
+            "else" => TokenKind::Else,
             "while" => TokenKind::While,
+            "loop" => TokenKind::Loop,
             "fn" => TokenKind::Fn,
             "struct" => TokenKind::Struct,
             "import" => TokenKind::Import,

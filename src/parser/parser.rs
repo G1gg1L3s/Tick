@@ -177,6 +177,9 @@ impl<'a> Parser<'a> {
             TokenKind::Continue => self.parse_one_token_expr(ExprKind::Continue),
             TokenKind::OpenSquare => self.parse_array_expr(),
             TokenKind::OpenBrace => self.parse_block_expr(),
+            TokenKind::If => self.parse_if_expr(),
+            TokenKind::While => self.parse_while_expr(),
+            TokenKind::Loop => self.parse_loop_expr(),
             _ => Err(PError::new("Expect expression", self.token.span)),
         }
     }
@@ -612,5 +615,57 @@ impl<'a> Parser<'a> {
             }
         };
         Ok(Stmt { kind, span })
+    }
+
+    /// Parses if expression ('if expr block (else block)? ')
+    /// this.token = 'if'
+    fn parse_if_expr(&mut self) -> PResult<Expr> {
+        let lo = self.token.span;
+        self.bump(); // 'if'
+        let expr = self.parse_expr()?;
+        if !self.token.is(TokenKind::OpenBrace) {
+            return Err(PError::new("'}' after expresion", self.token.span));
+        }
+        let block = self.parse_block()?;
+        let (elseb, span) = if self.eat(TokenKind::Else) {
+            let block = self.parse_block()?;
+            let span = block.span;
+            (Some(block), lo.to(span))
+        } else {
+            (None, lo.to(block.span))
+        };
+        let elseb = elseb.map(Box::new);
+        let kind = ExprKind::If(expr.into(), block.into(), elseb);
+        Ok(Expr { kind, span })
+    }
+
+
+    /// Parses while expression ('while expr block')
+    /// this.token = 'while'
+    fn parse_while_expr(&mut self) -> PResult<Expr> {
+        let lo = self.token.span;
+        self.bump(); // 'while'
+        let expr = self.parse_expr()?;
+        if !self.token.is(TokenKind::OpenBrace) {
+            return Err(PError::new("'{' after expresion", self.token.span));
+        }
+        let block = self.parse_block()?;
+        let span = lo.to(block.span);
+        let kind = ExprKind::While(expr.into(), block.into());
+        Ok(Expr { kind, span })
+    }
+
+    /// Parses loop expression ('loop block')
+    /// this.token = 'loop'
+    fn parse_loop_expr(&mut self) -> PResult<Expr> {
+        let lo = self.token.span;
+        self.bump(); // 'loop'
+        if !self.token.is(TokenKind::OpenBrace) {
+            return Err(PError::new("'{'", self.token.span));
+        }
+        let block = self.parse_block()?;
+        let span = lo.to(block.span);
+        let kind = ExprKind::Loop(block.into());
+        Ok(Expr { kind, span })
     }
 }

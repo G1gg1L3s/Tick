@@ -81,6 +81,12 @@ pub enum ExprKind {
     Array(Vec<Expr>),
     /// Block ('{ expr* '})
     Block(Box<Block>),
+    /// If expression ('if expr block (else block)?')
+    If(Box<Expr>, Box<Block>, Option<Box<Block>>),
+    /// While expression ('while expr block')
+    While(Box<Expr>, Box<Block>),
+    /// While expression ('loop block')
+    Loop(Box<Block>),
 }
 
 #[derive(Debug)]
