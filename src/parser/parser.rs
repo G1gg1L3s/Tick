@@ -605,6 +605,7 @@ impl<'a> Parser<'a> {
         let (span, kind) = match self.token.kind {
             TokenKind::Semi => {
                 let span = lo.to(self.token.span);
+                self.bump(); // ';'
                 let kind = StmtKind::Semi(expr.into());
                 (span, kind)
             }
