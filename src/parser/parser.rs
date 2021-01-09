@@ -393,6 +393,7 @@ impl<'a> Parser<'a> {
             TokenKind::Enum => self.parse_enum_item(),
             TokenKind::Import => unimplemented!(),
             TokenKind::Struct => self.parse_struct_item(),
+            TokenKind::Fn => self.parse_fn_item(),
             _ => Err(PError::new("Expect item", self.token.span)),
         }
     }
@@ -486,7 +487,7 @@ impl<'a> Parser<'a> {
         let ident = self.consume(TokenKind::Ident, "identifier")?;
         self.consume(TokenKind::OpenBrace, "'{' after struct name")?;
         let fields =
-            self.parse_comma_list(TokenKind::CloseBrace, |this| this.parse_struct_field())?;
+            self.parse_comma_list(TokenKind::CloseBrace, |this| this.parse_ident_type_pair())?;
         let close = self.consume(TokenKind::CloseBrace, "'}' after struct fields definition")?;
         let span = lo.to(close.span);
         Ok(Item {
@@ -496,14 +497,46 @@ impl<'a> Parser<'a> {
         })
     }
 
+    /// Parses function item ('fn IDENTIFIER ( (Param,)* ) block')
+    /// self.token = 'fn'
+    fn parse_fn_item(&mut self) -> PResult<Item> {
+        let lo = self.token.span;
+        self.bump(); // 'fn'
+        let ident = self.consume(TokenKind::Ident, "identifier")?;
+        self.consume(TokenKind::OpenParen, "'(' after function name")?;
+        let params =
+            self.parse_comma_list(TokenKind::CloseParen, |this| this.parse_ident_type_pair())?;
+        self.consume(TokenKind::CloseParen, "')' after function params")?;
+        let returns = if self.eat(TokenKind::Arrow) {
+            let ty = self.parse_type()?;
+            Some(ty)
+        } else {
+            None
+        };
+        if !self.token.is(TokenKind::OpenBrace) {
+            return Err(PError::new(
+                "Expect block after function params",
+                self.token.span,
+            ));
+        }
+        let block = self.parse_block()?;
+        let span = lo.to(block.span);
+        let sig = FnSignature { params, returns };
+        Ok(Item {
+            ident,
+            span,
+            kind: ItemKind::Fn(sig.into(), block.into()),
+        })
+    }
+
     /// Parses 'ident : type'
-    fn parse_struct_field(&mut self) -> PResult<StructField> {
+    fn parse_ident_type_pair(&mut self) -> PResult<IdentTypePair> {
         let ident = self.consume(TokenKind::Ident, "identifier")?;
         let lo = ident.span;
         self.consume(TokenKind::Colon, "':'")?;
         let ty = self.parse_type()?;
         let span = lo.to(ty.span);
-        Ok(StructField { ident, ty, span })
+        Ok(IdentTypePair { ident, ty, span })
     }
 
     /// Parses comma separated list (maybe with trailling comma) with callback
@@ -639,7 +672,6 @@ impl<'a> Parser<'a> {
         let kind = ExprKind::If(expr.into(), block.into(), elseb);
         Ok(Expr { kind, span })
     }
-
 
     /// Parses while expression ('while expr block')
     /// this.token = 'while'

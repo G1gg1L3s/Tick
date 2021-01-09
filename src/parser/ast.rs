@@ -126,7 +126,9 @@ pub enum ItemKind {
     /// An enum definition ('enum IDENTITER { EnumItems* }')
     Enum(Vec<Token>),
     /// A struct definition ('struct IDENTITER { StructFields* }')
-    Struct(Vec<StructField>),
+    Struct(Vec<IdentTypePair>),
+    /// Function declaration ('fn IDENTITER ( (Param,)* ) block')
+    Fn(Box<FnSignature>, Box<Block>),
 }
 
 #[derive(Debug)]
@@ -137,7 +139,7 @@ pub struct Item {
 }
 
 #[derive(Debug)]
-pub struct StructField {
+pub struct IdentTypePair {
     pub ident: Token,
     pub ty: Type,
     pub span: Span,
@@ -161,6 +163,12 @@ pub struct Local {
     pub ty: Option<Type>,
     pub expr: Expr,
     pub mutab: Mutability,
+}
+
+#[derive(Debug)]
+pub struct FnSignature {
+    pub params: Vec<IdentTypePair>,
+    pub returns: Option<Type>,
 }
 
 #[derive(Debug)]

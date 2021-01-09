@@ -73,6 +73,7 @@ pub trait Visitor<T> {
             }
             ItemKind::Enum(ref enums) => self.visit_enum(ident, enums),
             ItemKind::Struct(ref fields) => self.visit_struct(ident, fields),
+            ItemKind::Fn(ref sig, ref block) => self.visit_fn(ident, sig, block),
         }
     }
 
@@ -80,7 +81,8 @@ pub trait Visitor<T> {
     fn visit_const_item(&mut self, ident: &Token, ty: &Type, expr: &Expr) -> T;
     fn visit_static_item(&mut self, ident: &Token, mutab: Mutability, ty: &Type, expr: &Expr) -> T;
     fn visit_enum(&mut self, ident: &Token, enums: &[Token]) -> T;
-    fn visit_struct(&mut self, ident: &Token, fields: &[StructField]) -> T;
+    fn visit_struct(&mut self, ident: &Token, fields: &[IdentTypePair]) -> T;
+    fn visit_fn(&mut self, ident: &Token, sig: &FnSignature, block: &Block) -> T;
 
     fn visit_stmt(&mut self, stmt: &Stmt) -> T {
         match stmt.kind {
@@ -112,8 +114,8 @@ impl<'a> DebugFormatter<'a> {
         self.indent * TAB_SIZE
     }
 
-    fn visit_stuct_field(&mut self, field: &StructField) {
-        println!("{:indent$}STRUCT_FIELD:", "", indent = self.indent());
+    fn visit_ident_type_pair(&mut self, field: &IdentTypePair) {
+        println!("{:indent$}IDENT_TYPE_PAIR:", "", indent = self.indent());
         self.indent += 1;
         self.visit_lit(&field.ident, field.ident.span);
         self.visit_type(&field.ty);
@@ -362,11 +364,22 @@ impl<'a> Visitor<()> for DebugFormatter<'a> {
         self.indent -= 1;
     }
 
-    fn visit_struct(&mut self, ident: &Token, fields: &[StructField]) -> () {
-        println!("{:indent$}STRUCT_DECLARATION", "", indent = self.indent());
+    fn visit_struct(&mut self, ident: &Token, fields: &[IdentTypePair]) -> () {
+        println!("{:indent$}STRUCT_DEFINITION", "", indent = self.indent());
         self.indent += 1;
         self.visit_lit(ident, ident.span);
-        fields.iter().for_each(|f| self.visit_stuct_field(f));
+        fields.iter().for_each(|f| self.visit_ident_type_pair(f));
+        self.indent -= 1;
+    }
+
+    fn visit_fn(&mut self, ident: &Token, sig: &FnSignature, block: &Block) -> () {
+        println!("{:indent$}FN_DEFINITION", "", indent = self.indent());
+        self.indent += 1;
+        self.visit_lit(ident, ident.span);
+        sig.params
+            .iter()
+            .for_each(|f| self.visit_ident_type_pair(f));
+        self.visit_block(block);
         self.indent -= 1;
     }
 }
