@@ -34,12 +34,4 @@ impl Span {
         let (lo, mid, hi) = (lo as usize, mid as usize, hi as usize);
         (Span::new(lo, mid), Span::new(mid, hi))
     }
-
-    pub fn grow(&mut self, to: Self) {
-        self.hi = to.hi;
-    }
-
-    pub fn len(&self) -> usize {
-        self.hi as usize - self.lo as usize
-    }
 }

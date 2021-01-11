@@ -76,6 +76,14 @@ impl<'a> Parser<'a> {
         self.tokens.is_empty() && self.token.is(TokenKind::EOF)
     }
 
+    pub fn check(&self, kind: TokenKind, expect: &str) -> PResult<()> {
+        if !self.token.is(kind) {
+            Err(PError::new(format!("Expect {}", expect), self.token.span))
+        } else {
+            Ok(())
+        }
+    }
+
     pub fn bump(&mut self) {
         let old = self.token;
         self.token = self.tokens.pop().unwrap_or(old);
@@ -657,9 +665,7 @@ impl<'a> Parser<'a> {
         let lo = self.token.span;
         self.bump(); // 'if'
         let expr = self.parse_expr()?;
-        if !self.token.is(TokenKind::OpenBrace) {
-            return Err(PError::new("'}' after expresion", self.token.span));
-        }
+        self.check(TokenKind::OpenBrace, "'}' after expresion")?;
         let block = self.parse_block()?;
         let (elseb, span) = if self.eat(TokenKind::Else) {
             let block = self.parse_block()?;
@@ -679,9 +685,7 @@ impl<'a> Parser<'a> {
         let lo = self.token.span;
         self.bump(); // 'while'
         let expr = self.parse_expr()?;
-        if !self.token.is(TokenKind::OpenBrace) {
-            return Err(PError::new("'{' after expresion", self.token.span));
-        }
+        self.check(TokenKind::OpenBrace, "'{' after expresion")?;
         let block = self.parse_block()?;
         let span = lo.to(block.span);
         let kind = ExprKind::While(expr.into(), block.into());
@@ -693,9 +697,7 @@ impl<'a> Parser<'a> {
     fn parse_loop_expr(&mut self) -> PResult<Expr> {
         let lo = self.token.span;
         self.bump(); // 'loop'
-        if !self.token.is(TokenKind::OpenBrace) {
-            return Err(PError::new("'{'", self.token.span));
-        }
+        self.check(TokenKind::OpenBrace, "'{'")?;
         let block = self.parse_block()?;
         let span = lo.to(block.span);
         let kind = ExprKind::Loop(block.into());
