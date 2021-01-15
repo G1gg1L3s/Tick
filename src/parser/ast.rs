@@ -1,5 +1,5 @@
+use super::symbol::Symbol;
 use super::{lexer::Token, span::Span};
-
 #[derive(Clone, PartialEq, Debug, Copy)]
 pub enum UnOp {
     /// '@'
@@ -59,7 +59,7 @@ pub enum ExprKind {
     /// Grouped expression `(expr)`
     Grouped(Box<Expr>),
     /// Access of a struct field `a.b`
-    Field(Box<Expr>, Token),
+    Field(Box<Expr>, Ident),
     /// A taking address of expression operation `& mut? expr`
     AddrOf(Mutability, Box<Expr>),
     /// An indexing operation `expr[expr]`.
@@ -98,7 +98,7 @@ pub struct Expr {
 #[derive(Debug)]
 pub enum TypeKind {
     /// Typename like `i32` or `Point`
-    Ident(Token),
+    Ident(Ident),
     /// A pointer `& mut? Type`
     Pointer(Mutability, Box<Type>),
     /// The never type (`!`).
@@ -124,7 +124,7 @@ pub enum ItemKind {
     /// A static item ('static mut? IDENTIFIER : Type = Expr ;')
     Static(Mutability, Box<Type>, Box<Expr>),
     /// An enum definition ('enum IDENTITER { EnumItems* }')
-    Enum(Vec<Token>),
+    Enum(Vec<Ident>),
     /// A struct definition ('struct IDENTITER { StructFields* }')
     Struct(Vec<IdentTypePair>),
     /// Function declaration ('fn IDENTITER ( (Param,)* ) block')
@@ -133,14 +133,14 @@ pub enum ItemKind {
 
 #[derive(Debug)]
 pub struct Item {
-    pub ident: Token,
+    pub ident: Ident,
     pub kind: ItemKind,
     pub span: Span,
 }
 
 #[derive(Debug)]
 pub struct IdentTypePair {
-    pub ident: Token,
+    pub ident: Ident,
     pub ty: Type,
     pub span: Span,
 }
@@ -159,10 +159,16 @@ pub enum StmtKind {
 
 #[derive(Debug)]
 pub struct Local {
-    pub ident: Token,
+    pub ident: Ident,
     pub ty: Option<Type>,
     pub expr: Expr,
     pub mutab: Mutability,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct Ident {
+    pub ident: Symbol,
+    pub span: Span,
 }
 
 #[derive(Debug)]
@@ -185,7 +191,7 @@ pub struct Block {
 
 impl Stmt {
     pub fn new_let(
-        ident: Token,
+        ident: Ident,
         ty: Option<Type>,
         expr: Expr,
         mutab: Mutability,
@@ -233,7 +239,7 @@ impl Expr {
         }
     }
 
-    pub fn new_field(span: Span, lhs: Expr, name: Token) -> Self {
+    pub fn new_field(span: Span, lhs: Expr, name: Ident) -> Self {
         Self {
             span,
             kind: ExprKind::Field(Box::new(lhs), name),

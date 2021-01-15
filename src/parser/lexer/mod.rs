@@ -1,7 +1,7 @@
 mod low_lexer;
 pub use low_lexer::{Lexer as LLexer, TokenKind as LKind};
 
-use super::symbol::{symbols, Symbol};
+use super::symbol::{self, symbols, Symbol};
 use super::{error::PError, span::Span};
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -72,7 +72,7 @@ pub enum TokenKind {
 
     Number,
     /// Any identifier
-    Ident,
+    Ident(Symbol),
 
     // Keywords:
     Kw(Symbol),
@@ -118,7 +118,6 @@ impl From<LKind> for TokenKind {
             LKind::OpenSquare => TokenKind::OpenSquare,
             LKind::CloseSquare => TokenKind::CloseSquare,
             LKind::Number => TokenKind::Number,
-            LKind::Ident => TokenKind::Ident,
             LKind::EOF => TokenKind::EOF,
             LKind::Unknown => TokenKind::Unknown,
             LKind::As => TokenKind::Kw(symbols::AS),
@@ -138,6 +137,7 @@ impl From<LKind> for TokenKind {
             LKind::Break => TokenKind::Kw(symbols::BREAK),
             LKind::Continue => TokenKind::Kw(symbols::CONTINUE),
             LKind::Let => TokenKind::Kw(symbols::LET),
+            _ => unreachable!(),
         }
     }
 }
@@ -191,13 +191,16 @@ impl<'a> Lexer<'a> {
                     self.errors.push(PError::new(msg, span));
                 }
                 LKind::Whitespace => {}
-                // LKind::Ident => {},
                 kind => {
-                    self.tokens.push(Token {
-                        span,
-                        kind: kind.into(),
-                    });
-                    if kind == LKind::EOF {
+                    let kind = if let LKind::Ident = kind {
+                        let str = span.extract(self.src);
+                        let symb = Symbol::from(str);
+                        TokenKind::Ident(symb)
+                    } else {
+                        kind.into()
+                    };
+                    self.tokens.push(Token { span, kind });
+                    if kind == TokenKind::EOF {
                         break;
                     }
                 }

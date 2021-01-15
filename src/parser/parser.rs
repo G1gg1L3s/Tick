@@ -1,7 +1,7 @@
 use super::ast::*;
 use super::error::PError;
 use super::lexer::{Token, TokenKind};
-use super::symbol::symbols as sm;
+use super::symbol::{symbols as sm, Symbol};
 
 type PResult<T> = Result<T, PError>;
 
@@ -49,7 +49,7 @@ impl TokenKind {
     fn cab_begin_expr(&self) -> bool {
         match self {
             TokenKind::Number
-            | TokenKind::Ident
+            | TokenKind::Ident(..)
             | TokenKind::Minus
             | TokenKind::Bang
             | TokenKind::At
@@ -97,6 +97,17 @@ impl<'a> Parser<'a> {
             Ok(tk)
         } else {
             Err(PError::new(format!("Expect {}", expect), self.token.span))
+        }
+    }
+
+    fn consume_id(&mut self, expect: &str) -> PResult<Ident> {
+        match self.token.kind {
+            TokenKind::Ident(ident) => {
+                let span = self.token.span;
+                self.bump();
+                Ok(Ident { ident, span })
+            }
+            _ => Err(PError::new(format!("Expect {}", expect), self.token.span)),
         }
     }
 
@@ -175,7 +186,7 @@ impl<'a> Parser<'a> {
     /// Dispatch and parse prefix expression
     fn parse_prefix_expr(&mut self) -> PResult<Expr> {
         match self.token.kind {
-            TokenKind::Number | TokenKind::Ident => self.parse_lit(),
+            TokenKind::Number | TokenKind::Ident(..) => self.parse_lit(),
             TokenKind::Minus => self.parse_un(UnOp::Neg),
             TokenKind::Bang => self.parse_un(UnOp::Not),
             TokenKind::At => self.parse_un(UnOp::Deref),
@@ -246,7 +257,7 @@ impl<'a> Parser<'a> {
     /// lhs = 'a', self.token = '.'
     fn parse_field(&mut self, lhs: Expr) -> PResult<Expr> {
         self.bump(); // '.'
-        let field = self.consume(TokenKind::Ident, "identifier after dot expression")?;
+        let field = self.consume_id("identifier after dot expression")?;
         let span = lhs.span.to(field.span);
         Ok(Expr::new_field(span, lhs, field))
     }
@@ -343,11 +354,11 @@ impl<'a> Parser<'a> {
                 Ok(Type { kind, span })
             }
             TokenKind::OpenSquare => self.parse_arr_type(),
-            TokenKind::Ident => {
-                let tk = self.token;
+            TokenKind::Ident(ident) => {
+                let span = self.token.span;
+                let ident = Ident { ident, span };
                 self.bump();
-                let span = tk.span;
-                let kind = TypeKind::Ident(tk);
+                let kind = TypeKind::Ident(ident);
                 Ok(Type { kind, span })
             }
             _ => Err(PError::new("Expect type exression", self.token.span)),
@@ -411,7 +422,7 @@ impl<'a> Parser<'a> {
     fn parse_type_item(&mut self) -> PResult<Item> {
         let lo = self.token.span;
         self.bump(); // 'type'
-        let ident = self.consume(TokenKind::Ident, "identifier in type item")?;
+        let ident = self.consume_id("identifier in type item")?;
         self.consume(TokenKind::Eq, "'=' after identifier in type item")?;
         let ty = self.parse_type()?;
         let semi = self.consume(TokenKind::Semi, "';' after type item")?;
@@ -428,7 +439,7 @@ impl<'a> Parser<'a> {
     fn parse_const_item(&mut self) -> PResult<Item> {
         let lo = self.token.span;
         self.bump(); // 'const'
-        let ident = self.consume(TokenKind::Ident, "identifier in const item")?;
+        let ident = self.consume_id("identifier in const item")?;
         let (ty, expr) = self.parse_anon_item()?;
         let semi = self.consume(TokenKind::Semi, "';' after item")?;
         let span = lo.to(semi.span);
@@ -458,7 +469,7 @@ impl<'a> Parser<'a> {
         } else {
             Mutability::Const
         };
-        let ident = self.consume(TokenKind::Ident, "identifier in static item")?;
+        let ident = self.consume_id("identifier in static item")?;
         let (ty, expr) = self.parse_anon_item()?;
         let semi = self.consume(TokenKind::Semi, "';' after item")?;
         let span = lo.to(semi.span);
@@ -471,13 +482,13 @@ impl<'a> Parser<'a> {
 
     /// Parses enum item: 'enum IDENTIFIER { (IDENT,) * }'
     fn parse_enum_item(&mut self) -> PResult<Item> {
-        use TokenKind::{CloseBrace, Ident, OpenBrace};
+        use TokenKind::{CloseBrace, OpenBrace};
         let lo = self.token.span;
         self.bump(); // 'enum'
-        let ident = self.consume(Ident, "name of enum")?;
+        let ident = self.consume_id("name of enum")?;
         self.consume(OpenBrace, "'{' after enum keyword")?;
         let enums = self.parse_comma_list(CloseBrace, |this| {
-            this.consume(Ident, "Identifier in enum item")
+            this.consume_id("Identifier in enum item")
         })?;
         let close = self.consume(CloseBrace, "'}'")?;
         let span = lo.to(close.span);
@@ -493,7 +504,7 @@ impl<'a> Parser<'a> {
     fn parse_struct_item(&mut self) -> PResult<Item> {
         let lo = self.token.span;
         self.bump();
-        let ident = self.consume(TokenKind::Ident, "identifier")?;
+        let ident = self.consume_id("identifier")?;
         self.consume(TokenKind::OpenBrace, "'{' after struct name")?;
         let fields =
             self.parse_comma_list(TokenKind::CloseBrace, |this| this.parse_ident_type_pair())?;
@@ -511,7 +522,7 @@ impl<'a> Parser<'a> {
     fn parse_fn_item(&mut self) -> PResult<Item> {
         let lo = self.token.span;
         self.bump(); // 'fn'
-        let ident = self.consume(TokenKind::Ident, "identifier")?;
+        let ident = self.consume_id("identifier")?;
         self.consume(TokenKind::OpenParen, "'(' after function name")?;
         let params =
             self.parse_comma_list(TokenKind::CloseParen, |this| this.parse_ident_type_pair())?;
@@ -540,7 +551,7 @@ impl<'a> Parser<'a> {
 
     /// Parses 'ident : type'
     fn parse_ident_type_pair(&mut self) -> PResult<IdentTypePair> {
-        let ident = self.consume(TokenKind::Ident, "identifier")?;
+        let ident = self.consume_id("identifier")?;
         let lo = ident.span;
         self.consume(TokenKind::Colon, "':'")?;
         let ty = self.parse_type()?;
@@ -627,7 +638,7 @@ impl<'a> Parser<'a> {
         } else {
             Mutability::Const
         };
-        let ident = self.consume(TokenKind::Ident, "identifier in let expression")?;
+        let ident = self.consume_id("identifier in let expression")?;
         let ty = if self.eat(TokenKind::Colon) {
             Some(self.parse_type()?)
         } else {

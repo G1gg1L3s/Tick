@@ -32,7 +32,7 @@ pub trait Visitor<T> {
     fn visit_un(&mut self, op: UnOp, expr: &Expr, span: Span) -> T;
     fn visit_bin(&mut self, op: BinOp, lhs: &Expr, rhs: &Expr, span: Span) -> T;
     fn visit_group(&mut self, expr: &Expr, span: Span) -> T;
-    fn visit_field(&mut self, expr: &Expr, field: &Token, span: Span) -> T;
+    fn visit_field(&mut self, expr: &Expr, field: &Ident, span: Span) -> T;
     fn visit_addr_of(&mut self, mutab: Mutability, expr: &Expr, span: Span) -> T;
     fn visit_index(&mut self, lhs: &Expr, index: &Expr, span: Span) -> T;
     fn visit_ret(&mut self, expr: Option<&Expr>, span: Span) -> T;
@@ -56,7 +56,7 @@ pub trait Visitor<T> {
             TypeKind::ArrayType(ref ty, ref expr) => self.visit_type_arr(ty, expr, span),
         }
     }
-    fn visit_type_ident(&mut self, tk: &Token, span: Span) -> T;
+    fn visit_type_ident(&mut self, tk: &Ident, span: Span) -> T;
     fn visit_type_ptr(&mut self, mutab: Mutability, ty: &Type, span: Span) -> T;
     fn visit_type_never(&mut self, span: Span) -> T;
     fn visit_type_void(&mut self, span: Span) -> T;
@@ -77,12 +77,12 @@ pub trait Visitor<T> {
         }
     }
 
-    fn visit_type_item(&mut self, ident: &Token, ty: &Type, span: Span) -> T;
-    fn visit_const_item(&mut self, ident: &Token, ty: &Type, expr: &Expr) -> T;
-    fn visit_static_item(&mut self, ident: &Token, mutab: Mutability, ty: &Type, expr: &Expr) -> T;
-    fn visit_enum(&mut self, ident: &Token, enums: &[Token]) -> T;
-    fn visit_struct(&mut self, ident: &Token, fields: &[IdentTypePair]) -> T;
-    fn visit_fn(&mut self, ident: &Token, sig: &FnSignature, block: &Block) -> T;
+    fn visit_type_item(&mut self, ident: &Ident, ty: &Type, span: Span) -> T;
+    fn visit_const_item(&mut self, ident: &Ident, ty: &Type, expr: &Expr) -> T;
+    fn visit_static_item(&mut self, ident: &Ident, mutab: Mutability, ty: &Type, expr: &Expr) -> T;
+    fn visit_enum(&mut self, ident: &Ident, enums: &[Ident]) -> T;
+    fn visit_struct(&mut self, ident: &Ident, fields: &[IdentTypePair]) -> T;
+    fn visit_fn(&mut self, ident: &Ident, sig: &FnSignature, block: &Block) -> T;
 
     fn visit_stmt(&mut self, stmt: &Stmt) -> T {
         match stmt.kind {
@@ -117,9 +117,14 @@ impl<'a> DebugFormatter<'a> {
     fn visit_ident_type_pair(&mut self, field: &IdentTypePair) {
         println!("{:indent$}IDENT_TYPE_PAIR:", "", indent = self.indent());
         self.indent += 1;
-        self.visit_lit(&field.ident, field.ident.span);
+        self.visit_ident(&field.ident);
         self.visit_type(&field.ty);
         self.indent -= 1;
+    }
+
+    fn visit_ident(&mut self, ident: &Ident) {
+        let str: String = ident.ident.into();
+        println!("{:indent$}IDENT: {:?}", "", str, indent = self.indent());
     }
 }
 
@@ -127,7 +132,13 @@ impl<'a> Visitor<()> for DebugFormatter<'a> {
     fn visit_lit(&mut self, tk: &Token, span: Span) -> () {
         let value = span.extract(self.src);
         let indent = self.indent();
-        println!("{:indent$}LITERAL: {:?} '{}'", "", tk.kind, value, indent = indent);
+        println!(
+            "{:indent$}LITERAL: {:?} '{}'",
+            "",
+            tk.kind,
+            value,
+            indent = indent
+        );
     }
 
     fn visit_group(&mut self, expr: &Expr, _: Span) -> () {
@@ -155,7 +166,7 @@ impl<'a> Visitor<()> for DebugFormatter<'a> {
         self.indent -= 1;
     }
 
-    fn visit_field(&mut self, lhs: &Expr, token: &Token, _: Span) -> () {
+    fn visit_field(&mut self, lhs: &Expr, token: &Ident, _: Span) -> () {
         println!("{:indent$}FIELD:", "", indent = self.indent());
         self.indent += 1;
         self.visit_expr(lhs);
@@ -214,10 +225,8 @@ impl<'a> Visitor<()> for DebugFormatter<'a> {
         self.indent -= 1;
     }
 
-    fn visit_type_ident(&mut self, _: &Token, span: Span) -> () {
-        let value = span.extract(self.src);
-        let indent = self.indent();
-        println!("{:indent$}{}", "", value, indent = indent);
+    fn visit_type_ident(&mut self, ident: &Ident, _: Span) -> () {
+        self.visit_ident(ident);
     }
     fn visit_type_ptr(&mut self, mutab: Mutability, ty: &Type, _: Span) -> () {
         println!("{:indent$}{:?}_PTR:", "", mutab, indent = self.indent());
@@ -288,7 +297,7 @@ impl<'a> Visitor<()> for DebugFormatter<'a> {
     fn visit_let_stmt(&mut self, local: &Local) -> () {
         println!("{:indent$}LET", "", indent = self.indent());
         self.indent += 1;
-        self.visit_lit(&local.ident, local.ident.span);
+        self.visit_ident(&local.ident);
         if let Some(ref ty) = local.ty {
             self.visit_type(ty);
         } else {
@@ -310,18 +319,18 @@ impl<'a> Visitor<()> for DebugFormatter<'a> {
         self.indent -= 1;
     }
 
-    fn visit_type_item(&mut self, ident: &Token, ty: &Type, _: Span) -> () {
+    fn visit_type_item(&mut self, ident: &Ident, ty: &Type, _: Span) -> () {
         println!("{:indent$}TYPE_ALIAS", "", indent = self.indent());
         self.indent += 1;
-        self.visit_lit(ident, ident.span);
+        self.visit_ident(ident);
         self.visit_type(ty);
         self.indent -= 1;
     }
 
-    fn visit_const_item(&mut self, ident: &Token, ty: &Type, expr: &Expr) -> () {
+    fn visit_const_item(&mut self, ident: &Ident, ty: &Type, expr: &Expr) -> () {
         println!("{:indent$}CONST_ITEM", "", indent = self.indent());
         self.indent += 1;
-        self.visit_lit(ident, ident.span);
+        self.visit_ident(ident);
         self.visit_type(ty);
         self.visit_expr(expr);
         self.indent -= 1;
@@ -329,7 +338,7 @@ impl<'a> Visitor<()> for DebugFormatter<'a> {
 
     fn visit_static_item(
         &mut self,
-        ident: &Token,
+        ident: &Ident,
         mutab: Mutability,
         ty: &Type,
         expr: &Expr,
@@ -341,35 +350,32 @@ impl<'a> Visitor<()> for DebugFormatter<'a> {
             indent = self.indent()
         );
         self.indent += 1;
-        self.visit_lit(ident, ident.span);
+        self.visit_ident(ident);
         self.visit_type(ty);
         self.visit_expr(expr);
         self.indent -= 1;
     }
 
-    fn visit_enum(&mut self, ident: &Token, enums: &[Token]) -> () {
+    fn visit_enum(&mut self, ident: &Ident, enums: &[Ident]) -> () {
         println!("{:indent$}ENUM", "", indent = self.indent());
         self.indent += 1;
-        self.visit_lit(ident, ident.span);
-
-        enums
-            .iter()
-            .for_each(|item| self.visit_lit(item, item.span));
+        self.visit_ident(ident);
+        enums.iter().for_each(|item| self.visit_ident(item));
         self.indent -= 1;
     }
 
-    fn visit_struct(&mut self, ident: &Token, fields: &[IdentTypePair]) -> () {
+    fn visit_struct(&mut self, ident: &Ident, fields: &[IdentTypePair]) -> () {
         println!("{:indent$}STRUCT_DEFINITION", "", indent = self.indent());
         self.indent += 1;
-        self.visit_lit(ident, ident.span);
+        self.visit_ident(ident);
         fields.iter().for_each(|f| self.visit_ident_type_pair(f));
         self.indent -= 1;
     }
 
-    fn visit_fn(&mut self, ident: &Token, sig: &FnSignature, block: &Block) -> () {
+    fn visit_fn(&mut self, ident: &Ident, sig: &FnSignature, block: &Block) -> () {
         println!("{:indent$}FN_DEFINITION", "", indent = self.indent());
         self.indent += 1;
-        self.visit_lit(ident, ident.span);
+        self.visit_ident(ident);
         sig.params
             .iter()
             .for_each(|f| self.visit_ident_type_pair(f));

@@ -37,7 +37,7 @@ impl From<Symbol> for String {
 }
 
 impl StringInterner {
-    pub fn new() -> Self {
+    fn new() -> Self {
         Self {
             names: HashMap::new(),
             strings: Vec::new(),
