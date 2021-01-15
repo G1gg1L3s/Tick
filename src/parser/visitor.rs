@@ -127,13 +127,7 @@ impl<'a> Visitor<()> for DebugFormatter<'a> {
     fn visit_lit(&mut self, tk: &Token, span: Span) -> () {
         let value = span.extract(self.src);
         let indent = self.indent();
-        println!(
-            "{:indent$}LITERAL: {:?}: '{}'",
-            "",
-            tk.kind,
-            value,
-            indent = indent
-        );
+        println!("{:indent$}LITERAL: '{}'", "", value, indent = indent);
     }
 
     fn visit_group(&mut self, expr: &Expr, _: Span) -> () {

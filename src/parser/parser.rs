@@ -1,6 +1,7 @@
 use super::ast::*;
 use super::error::PError;
 use super::lexer::{Token, TokenKind};
+use super::symbol::symbols as sm;
 
 type PResult<T> = Result<T, PError>;
 
@@ -40,7 +41,7 @@ impl TokenKind {
             TokenKind::Star | TokenKind::Slash | TokenKind::Percent => MUL,
             TokenKind::Dot => FIELD,
             TokenKind::OpenSquare | TokenKind::OpenParen => CALL,
-            TokenKind::As => AS,
+            TokenKind::Kw(sm::As) => AS,
             _ => (0, 0),
         }
     }
@@ -55,9 +56,9 @@ impl TokenKind {
             | TokenKind::OpenParen
             | TokenKind::And
             | TokenKind::AndAnd
-            | TokenKind::Return
-            | TokenKind::Break
-            | TokenKind::Continue => true,
+            | TokenKind::Kw(sm::Return)
+            | TokenKind::Kw(sm::Break)
+            | TokenKind::Kw(sm::Continue) => true,
             _ => false,
         }
     }
@@ -180,14 +181,14 @@ impl<'a> Parser<'a> {
             TokenKind::At => self.parse_un(UnOp::Deref),
             TokenKind::OpenParen => self.parse_grouping(),
             TokenKind::And | TokenKind::AndAnd => self.parse_addrof(),
-            TokenKind::Return => self.parse_return(),
-            TokenKind::Break => self.parse_one_token_expr(ExprKind::Break),
-            TokenKind::Continue => self.parse_one_token_expr(ExprKind::Continue),
+            TokenKind::Kw(sm::Return) => self.parse_return(),
+            TokenKind::Kw(sm::Break) => self.parse_one_token_expr(ExprKind::Break),
+            TokenKind::Kw(sm::Continue) => self.parse_one_token_expr(ExprKind::Continue),
             TokenKind::OpenSquare => self.parse_array_expr(),
             TokenKind::OpenBrace => self.parse_block_expr(),
-            TokenKind::If => self.parse_if_expr(),
-            TokenKind::While => self.parse_while_expr(),
-            TokenKind::Loop => self.parse_loop_expr(),
+            TokenKind::Kw(sm::If) => self.parse_if_expr(),
+            TokenKind::Kw(sm::While) => self.parse_while_expr(),
+            TokenKind::Kw(sm::Loop) => self.parse_loop_expr(),
             _ => Err(PError::new("Expect expression", self.token.span)),
         }
     }
@@ -224,7 +225,7 @@ impl<'a> Parser<'a> {
             TokenKind::BangEq => self.parse_bin(BinOp::Ne, lhs, right_prec),
             TokenKind::Eq => self.parse_bin(BinOp::Assign, lhs, right_prec),
             TokenKind::OpenParen => self.parse_call(lhs),
-            TokenKind::As => self.parse_as_expr(lhs),
+            TokenKind::Kw(sm::As) => self.parse_as_expr(lhs),
 
             TokenKind::Dot => self.parse_field(lhs),
             TokenKind::OpenSquare => self.parse_index(lhs),
@@ -290,7 +291,7 @@ impl<'a> Parser<'a> {
     fn parse_addrof(&mut self) -> PResult<Expr> {
         let lo = self.token.span;
         self.eat_and()?;
-        let mutab = if self.eat(TokenKind::Mut) {
+        let mutab = if self.eat(TokenKind::Kw(sm::Mut)) {
             Mutability::Mut
         } else {
             Mutability::Const
@@ -358,7 +359,7 @@ impl<'a> Parser<'a> {
     fn parse_ptr_type(&mut self) -> PResult<Type> {
         let lo = self.token.span;
         self.eat_and()?;
-        let mutab = if self.eat(TokenKind::Mut) {
+        let mutab = if self.eat(TokenKind::Kw(sm::Mut)) {
             Mutability::Mut
         } else {
             Mutability::Const
@@ -395,13 +396,13 @@ impl<'a> Parser<'a> {
     /// Dispather for item parsing
     fn parse_item(&mut self) -> PResult<Item> {
         match self.token.kind {
-            TokenKind::Type => self.parse_type_item(),
-            TokenKind::Const => self.parse_const_item(),
-            TokenKind::Static => self.parse_static_item(),
-            TokenKind::Enum => self.parse_enum_item(),
-            TokenKind::Import => unimplemented!(),
-            TokenKind::Struct => self.parse_struct_item(),
-            TokenKind::Fn => self.parse_fn_item(),
+            TokenKind::Kw(sm::Type) => self.parse_type_item(),
+            TokenKind::Kw(sm::Const) => self.parse_const_item(),
+            TokenKind::Kw(sm::Static) => self.parse_static_item(),
+            TokenKind::Kw(sm::Enum) => self.parse_enum_item(),
+            TokenKind::Kw(sm::Import) => unimplemented!(),
+            TokenKind::Kw(sm::Struct) => self.parse_struct_item(),
+            TokenKind::Kw(sm::Fn) => self.parse_fn_item(),
             _ => Err(PError::new("Expect item", self.token.span)),
         }
     }
@@ -452,7 +453,7 @@ impl<'a> Parser<'a> {
     fn parse_static_item(&mut self) -> PResult<Item> {
         let lo = self.token.span;
         self.bump(); // 'static'
-        let mutab = if self.eat(TokenKind::Mut) {
+        let mutab = if self.eat(TokenKind::Kw(sm::Mut)) {
             Mutability::Mut
         } else {
             Mutability::Const
@@ -604,7 +605,7 @@ impl<'a> Parser<'a> {
     pub fn parse_stmt(&mut self) -> PResult<Stmt> {
         let lo = self.token.span;
         match self.token.kind {
-            TokenKind::Let => self.parse_let_stmt(),
+            TokenKind::Kw(sm::Let) => self.parse_let_stmt(),
             TokenKind::Semi => {
                 self.bump();
                 Ok(Stmt {
@@ -621,7 +622,7 @@ impl<'a> Parser<'a> {
     pub fn parse_let_stmt(&mut self) -> PResult<Stmt> {
         let lo = self.token.span;
         self.bump(); // 'let'
-        let mutab = if self.eat(TokenKind::Mut) {
+        let mutab = if self.eat(TokenKind::Kw(sm::Mut)) {
             Mutability::Mut
         } else {
             Mutability::Const
@@ -667,7 +668,7 @@ impl<'a> Parser<'a> {
         let expr = self.parse_expr()?;
         self.check(TokenKind::OpenBrace, "'}' after expresion")?;
         let block = self.parse_block()?;
-        let (elseb, span) = if self.eat(TokenKind::Else) {
+        let (elseb, span) = if self.eat(TokenKind::Kw(sm::Else)) {
             let block = self.parse_block()?;
             let span = block.span;
             (Some(block), lo.to(span))
