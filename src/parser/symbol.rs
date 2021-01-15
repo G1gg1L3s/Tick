@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{cell::RefCell, collections::HashMap};
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct Symbol(u32);
 
@@ -13,12 +13,41 @@ pub struct StringInterner {
     strings: Vec<String>,
 }
 
+thread_local! {
+    static STRING_INTERNER: RefCell<StringInterner> = RefCell::new(StringInterner::prefilled());
+}
+
+pub fn with_interner<T, F>(f: F) -> T
+where
+    F: FnOnce(&mut StringInterner) -> T,
+{
+    STRING_INTERNER.with(|interner| f(&mut *interner.borrow_mut()))
+}
+
+impl From<&str> for Symbol {
+    fn from(string: &str) -> Symbol {
+        with_interner(|interner| interner.insert(string))
+    }
+}
+
+impl From<Symbol> for String {
+    fn from(symb: Symbol) -> String {
+        with_interner(|interner| interner.lookup(symb).to_string())
+    }
+}
+
 impl StringInterner {
     pub fn new() -> Self {
         Self {
             names: HashMap::new(),
             strings: Vec::new(),
         }
+    }
+
+    pub fn prefilled() -> Self {
+        let mut res = Self::new();
+        res.pre_fill();
+        res
     }
 
     // Two allocations, ok for now but revisit in future
@@ -35,7 +64,7 @@ impl StringInterner {
         Symbol(index)
     }
 
-    pub fn lookup(&self, symb: Symbol) -> &str {
+    pub fn lookup<'a>(&'a self, symb: Symbol) -> &'a str {
         self.strings[symb.0 as usize].as_str()
     }
 }

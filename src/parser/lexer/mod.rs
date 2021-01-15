@@ -1,9 +1,8 @@
 mod low_lexer;
 pub use low_lexer::{Lexer as LLexer, TokenKind as LKind};
 
-use super::symbol::{Symbol, symbols};
+use super::symbol::{symbols, Symbol};
 use super::{error::PError, span::Span};
-use crate::compiler::Compiler;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum TokenKind {
@@ -168,17 +167,15 @@ pub struct Lexer<'a> {
     tokens: Vec<Token>,
     errors: Vec<PError>,
     lexer: LLexer<'a>,
-    compiler: &'a mut Compiler,
 }
 
 impl<'a> Lexer<'a> {
-    pub fn new(input: &'a str, compiler: &'a mut Compiler) -> Self {
+    pub fn new(input: &'a str) -> Self {
         Self {
             src: input,
             tokens: Vec::new(),
             errors: Vec::new(),
             lexer: LLexer::new(input),
-            compiler,
         }
     }
 
@@ -196,7 +193,10 @@ impl<'a> Lexer<'a> {
                 LKind::Whitespace => {}
                 // LKind::Ident => {},
                 kind => {
-                    self.tokens.push(Token { span, kind: kind.into() });
+                    self.tokens.push(Token {
+                        span,
+                        kind: kind.into(),
+                    });
                     if kind == LKind::EOF {
                         break;
                     }

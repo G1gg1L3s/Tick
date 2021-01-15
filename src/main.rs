@@ -4,16 +4,13 @@ use crate::parser::{
     parser::Parser,
     visitor::{DebugFormatter, Visitor},
 };
-use crate::compiler::Compiler;
 
-mod compiler;
 mod parser;
 
 fn main() {
     let file = std::env::args().nth(1).expect("expect filename");
     let input = std::fs::read_to_string(&file).unwrap();
-    let mut compiler = Compiler::new();
-    let (tokens, _) = Lexer::new(&input, &mut compiler).tokenize();
+    let (tokens, _) = Lexer::new(&input).tokenize();
     let items = Parser::new(&input, tokens).parse();
     match items {
         Ok(items) => {
