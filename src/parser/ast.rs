@@ -137,6 +137,9 @@ pub enum ItemKind {
     Struct(Vec<IdentTypePair>),
     /// Function declaration ('fn IDENTITER ( (Param,)* ) block')
     Fn(Box<FnSignature>, Box<Block>),
+    /// Module import ('import "String literal" ;')
+    /// name of the file is stored in the item's ident
+    Import
 }
 
 #[derive(Debug)]

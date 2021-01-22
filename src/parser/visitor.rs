@@ -125,5 +125,6 @@ pub fn walk_item<'a, V: Visitor<'a>>(vis: &mut V, item: &'a Item) {
             sig.returns.iter().for_each(|ty| vis.visit_type(ty));
             vis.visit_block(block);
         }
+        ItemKind::Import => {},
     }
 }

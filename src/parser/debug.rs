@@ -161,6 +161,9 @@ impl<'ast> Visitor<'ast> for DebugFormatter {
                 ItemKind::Fn(..) => {
                     println!("FN");
                 }
+                ItemKind::Import => {
+                    println!("IMPORT");
+                }
             }
             walk_item(this, item);
         });

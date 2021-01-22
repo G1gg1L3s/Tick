@@ -411,11 +411,27 @@ impl<'a> Parser<'a> {
             TokenKind::Kw(sm::CONST) => self.parse_const_item(),
             TokenKind::Kw(sm::STATIC) => self.parse_static_item(),
             TokenKind::Kw(sm::ENUM) => self.parse_enum_item(),
-            TokenKind::Kw(sm::IMPORT) => unimplemented!(),
+            TokenKind::Kw(sm::IMPORT) => self.parse_import_item(),
             TokenKind::Kw(sm::STRUCT) => self.parse_struct_item(),
             TokenKind::Kw(sm::FN) => self.parse_fn_item(),
             _ => Err(PError::new("Expect item", self.token.span)),
         }
+    }
+
+    /// Parses import item ('import "string literal" ;')
+    fn parse_import_item(&mut self) -> PResult<Item> {
+        let lo = self.token.span;
+        self.bump(); // 'import'
+        let ident = if let TokenKind::String(ident) = self.token.kind {
+            let span = self.token.span;
+            self.bump();
+            Ok(Ident{ ident, span })
+        } else {
+            Err(PError::new("expect string literal", self.token.span))
+        }?;
+        let end = self.consume(TokenKind::Semi, "';' after import item")?;
+        let span = lo.to(end.span);
+        Ok(Item::new_dummy(ident, ItemKind::Import, span))
     }
 
     /// Parses type alias item ('type IDENTIFIER = Type ;')
