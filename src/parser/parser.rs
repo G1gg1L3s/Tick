@@ -1,7 +1,7 @@
 use super::ast::*;
 use super::error::PError;
 use super::lexer::{Token, TokenKind};
-use super::symbol::{symbols as sm, Symbol};
+use crate::symbol::symbols as sm;
 
 type PResult<T> = Result<T, PError>;
 
@@ -140,7 +140,7 @@ impl<'a> Parser<'a> {
     fn parse_lit(&mut self) -> PResult<Expr> {
         let tk = self.token;
         self.bump();
-        Ok(Expr::new_lit(tk, tk.span))
+        Ok(Expr::dummy_lit(tk, tk.span))
     }
 
     /// Parses unary expression
@@ -150,7 +150,7 @@ impl<'a> Parser<'a> {
         self.bump();
         let expr = self.parse_expr_with(UN)?;
         let span = lo.to(expr.span);
-        Ok(Expr::new_un(span, op, expr))
+        Ok(Expr::dummy_un(span, op, expr))
     }
 
     /// Parses return expr
@@ -164,7 +164,7 @@ impl<'a> Parser<'a> {
         } else {
             lo
         };
-        Ok(Expr::new_ret(span, expr))
+        Ok(Expr::dummy_ret(span, expr))
     }
 
     /// Checks is self.token can begin expression and tries to parse it
@@ -180,7 +180,7 @@ impl<'a> Parser<'a> {
     fn parse_one_token_expr(&mut self, kind: ExprKind) -> PResult<Expr> {
         let span = self.token.span;
         self.bump();
-        Ok(Expr { kind, span })
+        Ok(Expr::new_dummy(kind, span))
     }
 
     /// Dispatch and parse prefix expression
@@ -250,7 +250,7 @@ impl<'a> Parser<'a> {
         self.bump();
         let rhs = self.parse_expr_with(right_prec)?;
         let span = lhs.span.to(rhs.span);
-        Ok(Expr::new_bin(span, op, lhs, rhs))
+        Ok(Expr::dummy_bin(span, op, lhs, rhs))
     }
 
     /// Parses 'a.b'
@@ -259,7 +259,7 @@ impl<'a> Parser<'a> {
         self.bump(); // '.'
         let field = self.consume_id("identifier after dot expression")?;
         let span = lhs.span.to(field.span);
-        Ok(Expr::new_field(span, lhs, field))
+        Ok(Expr::dummy_field(span, lhs, field))
     }
 
     /// Parses array expression '[a, b, c]'
@@ -270,7 +270,7 @@ impl<'a> Parser<'a> {
         let exprs = self.parse_comma_list_expr(TokenKind::CloseSquare)?;
         let close = self.consume(TokenKind::CloseSquare, "']' after list")?;
         let span = lo.to(close.span);
-        Ok(Expr::new_array(span, exprs))
+        Ok(Expr::dummy_array(span, exprs))
     }
 
     /// Parses call expression 'a(b)'
@@ -281,7 +281,7 @@ impl<'a> Parser<'a> {
         let params = self.parse_comma_list_expr(TokenKind::CloseParen)?;
         let close = self.consume(TokenKind::CloseParen, "')' after function call")?;
         let span = lo.to(close.span);
-        Ok(Expr::new_call(func, params, span))
+        Ok(Expr::dummy_call(func, params, span))
     }
     /// Same as parse_comma_list but specifically for list of expressions
     fn parse_comma_list_expr(&mut self, delim: TokenKind) -> PResult<Vec<Expr>> {
@@ -294,7 +294,7 @@ impl<'a> Parser<'a> {
         self.bump(); // "("
         let expr = self.parse_expr()?;
         self.consume(TokenKind::CloseParen, ")")?;
-        Ok(Expr::new_group(expr.span, expr))
+        Ok(Expr::dummy_group(expr.span, expr))
     }
 
     /// Parses address of operator ('& expr' or '& mut expr')
@@ -309,7 +309,7 @@ impl<'a> Parser<'a> {
         };
         let expr = self.parse_expr_with(UN)?;
         let span = lo.to(expr.span);
-        Ok(Expr::new_addr_of(span, mutab, expr))
+        Ok(Expr::dummy_addr_of(span, mutab, expr))
     }
 
     // Eats '&' possibly breaking '&&' if present
@@ -332,7 +332,7 @@ impl<'a> Parser<'a> {
         let index = self.parse_expr()?;
         let span = lo.to(index.span);
         self.consume(TokenKind::CloseSquare, "]")?;
-        Ok(Expr::new_index(span, lhs, index))
+        Ok(Expr::dummy_index(span, lhs, index))
     }
 
     /// Dispatches parsing of type based of self.token
@@ -343,7 +343,7 @@ impl<'a> Parser<'a> {
                 let span = self.token.span;
                 self.bump();
                 let kind = TypeKind::Never;
-                Ok(Type { kind, span })
+                Ok(Type::new_dummy(kind, span))
             }
             TokenKind::OpenParen => {
                 let span = self.token.span;
@@ -351,7 +351,7 @@ impl<'a> Parser<'a> {
                 let close = self.consume(TokenKind::CloseParen, ") as ending for void type")?;
                 let span = span.to(close.span);
                 let kind = TypeKind::Void;
-                Ok(Type { kind, span })
+                Ok(Type::new_dummy(kind, span))
             }
             TokenKind::OpenSquare => self.parse_arr_type(),
             TokenKind::Ident(ident) => {
@@ -359,7 +359,7 @@ impl<'a> Parser<'a> {
                 let ident = Ident { ident, span };
                 self.bump();
                 let kind = TypeKind::Ident(ident);
-                Ok(Type { kind, span })
+                Ok(Type::new_dummy(kind, span))
             }
             _ => Err(PError::new("Expect type exression", self.token.span)),
         }
@@ -378,7 +378,7 @@ impl<'a> Parser<'a> {
         let ty = self.parse_type()?;
         let span = lo.to(ty.span);
         let kind = TypeKind::Pointer(mutab, Box::new(ty));
-        Ok(Type { kind, span })
+        Ok(Type::new_dummy(kind, span))
     }
 
     /// Parses array type expression ('[type ; expr]')
@@ -391,7 +391,7 @@ impl<'a> Parser<'a> {
         let expr = self.parse_expr()?;
         let close = self.consume(TokenKind::CloseSquare, "]")?;
         let span = open.to(close.span);
-        Ok(Type::new_arr(ty, expr, span))
+        Ok(Type::dummy_arr(ty, expr, span))
     }
 
     /// Parses 'expr AS type'
@@ -401,7 +401,7 @@ impl<'a> Parser<'a> {
         self.bump(); // 'as'
         let ty = self.parse_type()?;
         let span = lo.to(ty.span);
-        Ok(Expr::new_as(lhs, ty, span))
+        Ok(Expr::dummy_as(lhs, ty, span))
     }
 
     /// Dispather for item parsing
@@ -427,11 +427,7 @@ impl<'a> Parser<'a> {
         let ty = self.parse_type()?;
         let semi = self.consume(TokenKind::Semi, "';' after type item")?;
         let span = lo.to(semi.span);
-        Ok(Item {
-            ident,
-            span,
-            kind: ItemKind::TypeAlias(ty.into()),
-        })
+        Ok(Item::new_dummy(ident, ItemKind::TypeAlias(ty.into()), span))
     }
 
     /// Parses const item ('const IDENTIFIER: Type = Expr ;')
@@ -443,11 +439,7 @@ impl<'a> Parser<'a> {
         let (ty, expr) = self.parse_anon_item()?;
         let semi = self.consume(TokenKind::Semi, "';' after item")?;
         let span = lo.to(semi.span);
-        Ok(Item {
-            ident,
-            span,
-            kind: ItemKind::Const(ty.into(), expr.into()),
-        })
+        Ok(Item::new_dummy(ident,ItemKind::Const(ty.into(), expr.into()), span))
     }
 
     /// Parses ': type = expr'
@@ -473,11 +465,7 @@ impl<'a> Parser<'a> {
         let (ty, expr) = self.parse_anon_item()?;
         let semi = self.consume(TokenKind::Semi, "';' after item")?;
         let span = lo.to(semi.span);
-        Ok(Item {
-            ident,
-            span,
-            kind: ItemKind::Static(mutab, ty.into(), expr.into()),
-        })
+        Ok(Item::new_dummy(ident, ItemKind::Static(mutab, ty.into(), expr.into()), span))
     }
 
     /// Parses enum item: 'enum IDENTIFIER { (IDENT,) * }'
@@ -492,11 +480,7 @@ impl<'a> Parser<'a> {
         })?;
         let close = self.consume(CloseBrace, "'}'")?;
         let span = lo.to(close.span);
-        Ok(Item {
-            ident,
-            span,
-            kind: ItemKind::Enum(enums),
-        })
+        Ok(Item::new_dummy(ident,ItemKind::Enum(enums), span))
     }
 
     /// Parses struct item ('struct IDENTIFIER { (IDENTIFIER : TYPE , )* }')
@@ -510,11 +494,7 @@ impl<'a> Parser<'a> {
             self.parse_comma_list(TokenKind::CloseBrace, |this| this.parse_ident_type_pair())?;
         let close = self.consume(TokenKind::CloseBrace, "'}' after struct fields definition")?;
         let span = lo.to(close.span);
-        Ok(Item {
-            ident,
-            span,
-            kind: ItemKind::Struct(fields),
-        })
+        Ok(Item::new_dummy(ident,ItemKind::Struct(fields), span))
     }
 
     /// Parses function item ('fn IDENTIFIER ( (Param,)* ) block')
@@ -542,11 +522,7 @@ impl<'a> Parser<'a> {
         let block = self.parse_block()?;
         let span = lo.to(block.span);
         let sig = FnSignature { params, returns };
-        Ok(Item {
-            ident,
-            span,
-            kind: ItemKind::Fn(sig.into(), block.into()),
-        })
+        Ok(Item::new_dummy(ident,ItemKind::Fn(sig.into(), block.into()), span))
     }
 
     /// Parses 'ident : type'
@@ -594,7 +570,7 @@ impl<'a> Parser<'a> {
         let block = self.parse_block()?;
         let span = block.span;
         let kind = ExprKind::Block(block.into());
-        Ok(Expr { span, kind })
+        Ok(Expr::new_dummy(kind, span))
     }
 
     /// Parses block '{ statement* }'
@@ -619,10 +595,7 @@ impl<'a> Parser<'a> {
             TokenKind::Kw(sm::LET) => self.parse_let_stmt(),
             TokenKind::Semi => {
                 self.bump();
-                Ok(Stmt {
-                    kind: StmtKind::Empty,
-                    span: lo,
-                })
+                Ok(Stmt::new_dummy(StmtKind::Empty, lo))
             }
             // Parse it as expression and wrap it into statement
             _ => self.parse_expr_stmt(),
@@ -648,7 +621,7 @@ impl<'a> Parser<'a> {
         let expr = self.parse_expr()?;
         let close = self.consume(TokenKind::Semi, "';'")?;
         let span = lo.to(close.span);
-        Ok(Stmt::new_let(ident, ty, expr, mutab, span))
+        Ok(Stmt::dummy_let(ident, ty, expr, mutab, span))
     }
 
     /// Parses expression and wraps it into statement with or without semicolon
@@ -668,7 +641,7 @@ impl<'a> Parser<'a> {
                 return Err(PError::new("Expect ';' or '}'", self.token.span));
             }
         };
-        Ok(Stmt { kind, span })
+        Ok(Stmt::new_dummy(kind, span))
     }
 
     /// Parses if expression ('if expr block (else block)? ')
@@ -688,7 +661,7 @@ impl<'a> Parser<'a> {
         };
         let elseb = elseb.map(Box::new);
         let kind = ExprKind::If(expr.into(), block.into(), elseb);
-        Ok(Expr { kind, span })
+        Ok(Expr::new_dummy(kind, span))
     }
 
     /// Parses while expression ('while expr block')
@@ -701,7 +674,7 @@ impl<'a> Parser<'a> {
         let block = self.parse_block()?;
         let span = lo.to(block.span);
         let kind = ExprKind::While(expr.into(), block.into());
-        Ok(Expr { kind, span })
+        Ok(Expr::new_dummy(kind, span))
     }
 
     /// Parses loop expression ('loop block')
@@ -713,6 +686,6 @@ impl<'a> Parser<'a> {
         let block = self.parse_block()?;
         let span = lo.to(block.span);
         let kind = ExprKind::Loop(block.into());
-        Ok(Expr { kind, span })
+        Ok(Expr::new_dummy(kind, span))
     }
 }

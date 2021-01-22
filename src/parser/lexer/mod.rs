@@ -1,8 +1,8 @@
 mod low_lexer;
 pub use low_lexer::{Lexer as LLexer, TokenKind as LKind};
 
-use super::symbol::{self, symbols, Symbol};
 use super::{error::PError, span::Span};
+use crate::symbol::{symbols, Symbol};
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum TokenKind {

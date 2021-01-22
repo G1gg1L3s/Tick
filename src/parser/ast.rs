@@ -1,5 +1,11 @@
-use super::symbol::Symbol;
 use super::{lexer::Token, span::Span};
+use crate::symbol::Symbol;
+
+#[derive(Debug, Clone, Copy)]
+pub struct NodeId(u32);
+
+const DUMMY_NODE: NodeId = NodeId(0);
+
 #[derive(Clone, PartialEq, Debug, Copy)]
 pub enum UnOp {
     /// '@'
@@ -91,6 +97,7 @@ pub enum ExprKind {
 
 #[derive(Debug)]
 pub struct Expr {
+    pub id: NodeId,
     pub kind: ExprKind,
     pub span: Span,
 }
@@ -111,6 +118,7 @@ pub enum TypeKind {
 
 #[derive(Debug)]
 pub struct Type {
+    pub id: NodeId,
     pub kind: TypeKind,
     pub span: Span,
 }
@@ -133,6 +141,7 @@ pub enum ItemKind {
 
 #[derive(Debug)]
 pub struct Item {
+    pub id: NodeId,
     pub ident: Ident,
     pub kind: ItemKind,
     pub span: Span,
@@ -179,6 +188,7 @@ pub struct FnSignature {
 
 #[derive(Debug)]
 pub struct Stmt {
+    pub id: NodeId,
     pub kind: StmtKind,
     pub span: Span,
 }
@@ -190,7 +200,15 @@ pub struct Block {
 }
 
 impl Stmt {
-    pub fn new_let(
+    pub fn new_dummy(kind: StmtKind, span: Span) -> Self {
+        Self {
+            id: DUMMY_NODE,
+            kind,
+            span,
+        }
+    }
+
+    pub fn dummy_let(
         ident: Ident,
         ty: Option<Type>,
         expr: Expr,
@@ -204,6 +222,7 @@ impl Stmt {
             mutab,
         };
         Self {
+            id: DUMMY_NODE,
             kind: StmtKind::Let(local.into()),
             span,
         }
@@ -211,78 +230,97 @@ impl Stmt {
 }
 
 impl Expr {
-    pub fn new_lit(tk: Token, span: Span) -> Self {
+    pub fn new_dummy(kind: ExprKind, span: Span) -> Self {
         Self {
+            id: DUMMY_NODE,
+            kind,
+            span,
+        }
+    }
+
+    pub fn dummy_lit(tk: Token, span: Span) -> Self {
+        Self {
+            id: DUMMY_NODE,
             span,
             kind: ExprKind::Literal(tk),
         }
     }
 
-    pub fn new_un(span: Span, op: UnOp, expr: Expr) -> Self {
+    pub fn dummy_un(span: Span, op: UnOp, expr: Expr) -> Self {
         Self {
+            id: DUMMY_NODE,
             span,
             kind: ExprKind::UnExpr(op, Box::new(expr)),
         }
     }
 
-    pub fn new_group(span: Span, expr: Expr) -> Self {
+    pub fn dummy_group(span: Span, expr: Expr) -> Self {
         Self {
+            id: DUMMY_NODE,
             span,
             kind: ExprKind::Grouped(Box::new(expr)),
         }
     }
 
-    pub fn new_bin(span: Span, op: BinOp, lhs: Expr, rhs: Expr) -> Self {
+    pub fn dummy_bin(span: Span, op: BinOp, lhs: Expr, rhs: Expr) -> Self {
         Self {
+            id: DUMMY_NODE,
             span,
             kind: ExprKind::BinExpr(op, Box::new(lhs), Box::new(rhs)),
         }
     }
 
-    pub fn new_field(span: Span, lhs: Expr, name: Ident) -> Self {
+    pub fn dummy_field(span: Span, lhs: Expr, name: Ident) -> Self {
         Self {
+            id: DUMMY_NODE,
             span,
             kind: ExprKind::Field(Box::new(lhs), name),
         }
     }
 
-    pub fn new_addr_of(span: Span, mutab: Mutability, expr: Expr) -> Self {
+    pub fn dummy_addr_of(span: Span, mutab: Mutability, expr: Expr) -> Self {
         Self {
+            id: DUMMY_NODE,
             span,
             kind: ExprKind::AddrOf(mutab, Box::new(expr)),
         }
     }
 
-    pub fn new_index(span: Span, lhs: Expr, index: Expr) -> Self {
+    pub fn dummy_index(span: Span, lhs: Expr, index: Expr) -> Self {
         Self {
+            id: DUMMY_NODE,
             span,
             kind: ExprKind::Index(Box::new(lhs), Box::new(index)),
         }
     }
 
-    pub fn new_ret(span: Span, expr: Option<Expr>) -> Self {
+    pub fn dummy_ret(span: Span, expr: Option<Expr>) -> Self {
         Self {
+            id: DUMMY_NODE,
             span,
             kind: ExprKind::Ret(expr.map(Box::new)),
         }
     }
 
-    pub fn new_call(func: Expr, params: Vec<Expr>, span: Span) -> Self {
+    pub fn dummy_call(func: Expr, params: Vec<Expr>, span: Span) -> Self {
         Self {
+            id: DUMMY_NODE,
             span,
             kind: ExprKind::Call(Box::new(func), params),
         }
     }
 
-    pub fn new_as(lhs: Expr, ty: Type, span: Span) -> Self {
+    pub fn dummy_as(lhs: Expr, ty: Type, span: Span) -> Self {
         Self {
+            id: DUMMY_NODE,
             span,
             kind: ExprKind::As(Box::new(lhs), Box::new(ty)),
         }
     }
 
-    pub fn new_array(span: Span, exprs: Vec<Expr>) -> Self {
+    pub fn dummy_array(span: Span, exprs: Vec<Expr>) -> Self {
         Self {
+            id: DUMMY_NODE,
             span,
             kind: ExprKind::Array(exprs),
         }
@@ -290,10 +328,30 @@ impl Expr {
 }
 
 impl Type {
-    pub fn new_arr(ty: Type, expr: Expr, span: Span) -> Self {
+    pub fn new_dummy(kind: TypeKind, span: Span) -> Self {
         Self {
+            id: DUMMY_NODE,
+            kind,
+            span,
+        }
+    }
+
+    pub fn dummy_arr(ty: Type, expr: Expr, span: Span) -> Self {
+        Self {
+            id: DUMMY_NODE,
             span,
             kind: TypeKind::ArrayType(Box::new(ty), Box::new(expr)),
+        }
+    }
+}
+
+impl Item {
+    pub fn new_dummy(ident: Ident, kind: ItemKind, span: Span) -> Self {
+        Self {
+            id: DUMMY_NODE,
+            ident,
+            kind,
+            span,
         }
     }
 }

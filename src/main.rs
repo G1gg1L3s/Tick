@@ -6,6 +6,7 @@ use crate::parser::{
 };
 
 mod parser;
+mod symbol;
 
 fn main() {
     let file = std::env::args().nth(1).expect("expect filename");
