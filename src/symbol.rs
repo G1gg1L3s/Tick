@@ -1,7 +1,7 @@
-use std::{cell::RefCell, collections::HashMap};
+use std::{cell::RefCell, collections::HashMap, fmt};
 use typed_arena::Arena;
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub struct Symbol(u32);
 
 impl Symbol {
@@ -36,6 +36,18 @@ impl From<&str> for Symbol {
 impl From<Symbol> for String {
     fn from(symb: Symbol) -> String {
         with_interner(|interner| interner.lookup(symb).to_string())
+    }
+}
+
+impl Symbol {
+    pub fn as_str<'a>(self) -> &'a str {
+        with_interner(|interner| interner.lookup(self))
+    }
+}
+
+impl fmt::Debug for Symbol {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Symbol(\"{}\")", self.as_str())
     }
 }
 

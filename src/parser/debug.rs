@@ -26,8 +26,7 @@ impl DebugFormatter {
 impl<'ast> Visitor<'ast> for DebugFormatter {
     fn visit_ident(&mut self, ident: &'ast Ident) {
         self.with(|_| {
-            let name: String = ident.ident.into();
-            println!("IDENT: '{}'", name);
+            println!("IDENT: {:?}", ident.ident);
         });
     }
 
@@ -93,7 +92,10 @@ impl<'ast> Visitor<'ast> for DebugFormatter {
     fn visit_type(&mut self, ty: &'ast Type) {
         self.with(|this| {
             match ty.kind {
-                TypeKind::Ident(..) => {}
+                TypeKind::Ident(ref ident) => {
+                    println!("TYPE_IDENT: {:?}", ident.ident);
+                    return;
+                }
                 TypeKind::Pointer(mutab, ..) => {
                     println!("POINTER '{:?}'", mutab);
                 }
