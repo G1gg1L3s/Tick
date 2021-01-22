@@ -77,6 +77,9 @@ pub enum TokenKind {
     // Keywords:
     Kw(Symbol),
 
+    /// String literal "foobar"
+    String(Symbol),
+
     /// End of file
     EOF,
     /// For errors
@@ -190,14 +193,27 @@ impl<'a> Lexer<'a> {
                     let msg = format!("Unknown token: '{}'", span.extract(self.src));
                     self.errors.push(PError::new(msg, span));
                 }
+
+                LKind::String { closed: false } => {
+                    self.errors
+                        .push(PError::new("Unclosed string literal", span));
+                }
                 LKind::Whitespace => {}
                 kind => {
-                    let kind = if let LKind::Ident = kind {
-                        let str = span.extract(self.src);
-                        let symb = Symbol::from(str);
-                        TokenKind::Ident(symb)
-                    } else {
-                        kind.into()
+                    let kind = match kind {
+                        LKind::Ident => {
+                            let str = span.extract(self.src);
+                            let symb = Symbol::from(str);
+                            TokenKind::Ident(symb)
+                        }
+                        LKind::String { closed: true } => {
+                            let str = span.extract(self.src);
+                            let str = str.strip_prefix('"').unwrap_or(str);
+                            let str = str.strip_suffix('"').unwrap_or(str);
+                            let symb = Symbol::from(str);
+                            TokenKind::String(symb)
+                        }
+                        _ => kind.into(),
                     };
                     self.tokens.push(Token { span, kind });
                     if kind == TokenKind::EOF {

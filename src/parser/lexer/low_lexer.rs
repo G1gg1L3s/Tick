@@ -89,6 +89,9 @@ pub enum TokenKind {
     Continue,
     Let,
 
+    String {
+        closed: bool,
+    },
     /// End of file
     EOF,
     /// For errors
@@ -156,6 +159,7 @@ impl<'a> Lexer<'a> {
             '(' => TokenKind::OpenParen,
             ')' => TokenKind::CloseParen,
             '0'..='9' => self.number(),
+            '"' => self.string(),
             c if is_ident_start(c) => self.ident(),
             '\0' => TokenKind::EOF,
             _ => TokenKind::Unknown,
@@ -202,6 +206,20 @@ impl<'a> Lexer<'a> {
             self.bump();
         }
         TokenKind::Number
+    }
+
+    fn string(&mut self) -> TokenKind {
+        loop {
+            match self.first() {
+                '"' => {
+                    self.bump();
+                    return TokenKind::String { closed: true };
+                }
+                '\n' | '\0' => return TokenKind::String { closed: false },
+                _ => {}
+            }
+            self.bump();
+        }
     }
 
     fn bumped(&self) -> usize {

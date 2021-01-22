@@ -186,7 +186,7 @@ impl<'a> Parser<'a> {
     /// Dispatch and parse prefix expression
     fn parse_prefix_expr(&mut self) -> PResult<Expr> {
         match self.token.kind {
-            TokenKind::Number | TokenKind::Ident(..) => self.parse_lit(),
+            TokenKind::Number | TokenKind::Ident(..) | TokenKind::String(..) => self.parse_lit(),
             TokenKind::Minus => self.parse_un(UnOp::Neg),
             TokenKind::Bang => self.parse_un(UnOp::Not),
             TokenKind::At => self.parse_un(UnOp::Deref),
