@@ -1,9 +1,5 @@
 #![feature(iter_advance_by)]
-use crate::parser::{
-    lexer::Lexer,
-    parser::Parser,
-    visitor::{DebugFormatter, Visitor},
-};
+use crate::parser::{debug::DebugFormatter, lexer::Lexer, parser::Parser, visitor::Visitor};
 
 mod parser;
 mod symbol;
@@ -15,7 +11,7 @@ fn main() {
     let items = Parser::new(&input, tokens).parse();
     match items {
         Ok(items) => {
-            let mut formatter = DebugFormatter::new(&input);
+            let mut formatter = DebugFormatter::new();
             items.iter().for_each(|item| formatter.visit_item(item));
         }
         Err(err) => {

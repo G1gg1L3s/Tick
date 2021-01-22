@@ -439,7 +439,11 @@ impl<'a> Parser<'a> {
         let (ty, expr) = self.parse_anon_item()?;
         let semi = self.consume(TokenKind::Semi, "';' after item")?;
         let span = lo.to(semi.span);
-        Ok(Item::new_dummy(ident,ItemKind::Const(ty.into(), expr.into()), span))
+        Ok(Item::new_dummy(
+            ident,
+            ItemKind::Const(ty.into(), expr.into()),
+            span,
+        ))
     }
 
     /// Parses ': type = expr'
@@ -465,7 +469,11 @@ impl<'a> Parser<'a> {
         let (ty, expr) = self.parse_anon_item()?;
         let semi = self.consume(TokenKind::Semi, "';' after item")?;
         let span = lo.to(semi.span);
-        Ok(Item::new_dummy(ident, ItemKind::Static(mutab, ty.into(), expr.into()), span))
+        Ok(Item::new_dummy(
+            ident,
+            ItemKind::Static(mutab, ty.into(), expr.into()),
+            span,
+        ))
     }
 
     /// Parses enum item: 'enum IDENTIFIER { (IDENT,) * }'
@@ -480,7 +488,7 @@ impl<'a> Parser<'a> {
         })?;
         let close = self.consume(CloseBrace, "'}'")?;
         let span = lo.to(close.span);
-        Ok(Item::new_dummy(ident,ItemKind::Enum(enums), span))
+        Ok(Item::new_dummy(ident, ItemKind::Enum(enums), span))
     }
 
     /// Parses struct item ('struct IDENTIFIER { (IDENTIFIER : TYPE , )* }')
@@ -494,7 +502,7 @@ impl<'a> Parser<'a> {
             self.parse_comma_list(TokenKind::CloseBrace, |this| this.parse_ident_type_pair())?;
         let close = self.consume(TokenKind::CloseBrace, "'}' after struct fields definition")?;
         let span = lo.to(close.span);
-        Ok(Item::new_dummy(ident,ItemKind::Struct(fields), span))
+        Ok(Item::new_dummy(ident, ItemKind::Struct(fields), span))
     }
 
     /// Parses function item ('fn IDENTIFIER ( (Param,)* ) block')
@@ -522,7 +530,11 @@ impl<'a> Parser<'a> {
         let block = self.parse_block()?;
         let span = lo.to(block.span);
         let sig = FnSignature { params, returns };
-        Ok(Item::new_dummy(ident,ItemKind::Fn(sig.into(), block.into()), span))
+        Ok(Item::new_dummy(
+            ident,
+            ItemKind::Fn(sig.into(), block.into()),
+            span,
+        ))
     }
 
     /// Parses 'ident : type'
