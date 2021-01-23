@@ -5,11 +5,14 @@ The main idea is to create a basic compiler for C-like lang with rust-like synta
 Currently work is in progress, but if you see it is not, feel free to contact me and recall that I promised to finish this project.
 
 ## Todo:
-- [x] lexing
-- [x] parsing expression
-- [ ] parsing items
-- [ ] better error recovery
-- [ ] name resolution
-- [ ] type checking
-- [ ] come up with ir
-- [ ] code generation
+- Frontend
+  - [x] lexing
+  - [x] parsing expression
+  - [x] parsing items
+  - [ ] better error recovery
+  - [ ] name resolution
+  - [ ] type checking
+  - [ ] modules
+- Backend
+  - [ ] ir
+  - [ ] code generation
