@@ -4,6 +4,12 @@ use crate::symbol::Symbol;
 #[derive(Debug, Clone, Copy)]
 pub struct NodeId(u32);
 
+impl NodeId {
+    pub fn new(id: u32) -> Self {
+        NodeId(id)
+    }
+}
+
 const DUMMY_NODE: NodeId = NodeId(0);
 #[derive(Debug)]
 pub struct Module {
