@@ -46,10 +46,11 @@ impl TokenKind {
         }
     }
 
-    fn cab_begin_expr(&self) -> bool {
+    fn can_begin_expr(&self) -> bool {
         match self {
             TokenKind::Number
             | TokenKind::Ident(..)
+            | TokenKind::String(..)
             | TokenKind::Minus
             | TokenKind::Bang
             | TokenKind::At
@@ -169,7 +170,7 @@ impl<'a> Parser<'a> {
 
     /// Checks is self.token can begin expression and tries to parse it
     fn maybe_parse_expr(&mut self) -> Option<PResult<Expr>> {
-        if self.token.kind.cab_begin_expr() {
+        if self.token.kind.can_begin_expr() {
             Some(self.parse_expr())
         } else {
             None
@@ -425,7 +426,7 @@ impl<'a> Parser<'a> {
         let ident = if let TokenKind::String(ident) = self.token.kind {
             let span = self.token.span;
             self.bump();
-            Ok(Ident{ ident, span })
+            Ok(Ident { ident, span })
         } else {
             Err(PError::new("expect string literal", self.token.span))
         }?;

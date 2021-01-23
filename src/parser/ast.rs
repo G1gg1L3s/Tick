@@ -139,7 +139,7 @@ pub enum ItemKind {
     Fn(Box<FnSignature>, Box<Block>),
     /// Module import ('import "String literal" ;')
     /// name of the file is stored in the item's ident
-    Import
+    Import,
 }
 
 #[derive(Debug)]
