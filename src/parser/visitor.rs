@@ -1,5 +1,6 @@
 use super::ast::*;
 
+#[macro_export]
 macro_rules! walk_all {
     ($vis: expr, $method: ident, $list: expr) => {
         for elem in $list {

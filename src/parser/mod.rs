@@ -1,7 +1,9 @@
 pub mod ast;
 pub mod debug;
 pub mod error;
+pub mod id_distr;
 pub mod lexer;
+pub mod mut_visitor;
 pub mod parser;
 pub mod span;
 pub mod visitor;

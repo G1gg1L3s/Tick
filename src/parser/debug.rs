@@ -32,6 +32,7 @@ impl<'ast> Visitor<'ast> for DebugFormatter {
 
     fn visit_expr(&mut self, expr: &'ast Expr) {
         self.with(|this| {
+            print!("{:?}::", expr.id);
             match expr.kind {
                 ExprKind::Literal(token) => {
                     println!("LITERAL {:?}", token.kind);
@@ -91,6 +92,7 @@ impl<'ast> Visitor<'ast> for DebugFormatter {
 
     fn visit_type(&mut self, ty: &'ast Type) {
         self.with(|this| {
+            print!("{:?}::", ty.id);
             match ty.kind {
                 TypeKind::Ident(ref ident) => {
                     println!("TYPE_IDENT: {:?}", ident.ident);
@@ -114,6 +116,7 @@ impl<'ast> Visitor<'ast> for DebugFormatter {
     }
 
     fn visit_stmt(&mut self, stmt: &'ast Stmt) {
+        print!("{:?}::", stmt.id);
         self.with(|this| {
             match stmt.kind {
                 StmtKind::Expr(..) => {
@@ -142,6 +145,7 @@ impl<'ast> Visitor<'ast> for DebugFormatter {
 
     fn visit_item(&mut self, item: &'ast Item) {
         self.with(|this| {
+            print!("{:?}::", item.id);
             match &item.kind {
                 ItemKind::TypeAlias(..) => {
                     println!("TYPE_ALIAS");

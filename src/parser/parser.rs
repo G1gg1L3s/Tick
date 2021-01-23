@@ -1,6 +1,8 @@
 use super::ast::*;
 use super::error::PError;
+use super::id_distr::IdDistributor;
 use super::lexer::{Token, TokenKind};
+use super::mut_visitor::MutVisitor;
 use crate::symbol::symbols as sm;
 
 type PResult<T> = Result<T, PError>;
@@ -129,7 +131,9 @@ impl<'a> Parser<'a> {
             let item = self.parse_item()?;
             items.push(item);
         }
-        Ok(Module { items })
+        let mut module = Module { items };
+        IdDistributor::new().visit_module(&mut module);
+        Ok(module)
     }
 
     fn parse_expr(&mut self) -> PResult<Expr> {
