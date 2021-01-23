@@ -5,6 +5,10 @@ use crate::symbol::Symbol;
 pub struct NodeId(u32);
 
 const DUMMY_NODE: NodeId = NodeId(0);
+#[derive(Debug)]
+pub struct Module {
+    pub items: Vec<Item>,
+}
 
 #[derive(Clone, PartialEq, Debug, Copy)]
 pub enum UnOp {

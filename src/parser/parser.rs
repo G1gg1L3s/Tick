@@ -122,14 +122,14 @@ impl<'a> Parser<'a> {
     }
 
     /// Entry point of parser. For now, parses only expressions
-    pub fn parse(mut self) -> PResult<Vec<Item>> {
+    pub fn parse(mut self) -> PResult<Module> {
         self.bump();
         let mut items = Vec::new();
         while !self.is_end() {
             let item = self.parse_item()?;
             items.push(item);
         }
-        Ok(items)
+        Ok(Module { items })
     }
 
     fn parse_expr(&mut self) -> PResult<Expr> {

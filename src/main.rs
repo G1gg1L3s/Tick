@@ -10,9 +10,8 @@ fn main() {
     let (tokens, _) = Lexer::new(&input).tokenize();
     let items = Parser::new(&input, tokens).parse();
     match items {
-        Ok(items) => {
-            let mut formatter = DebugFormatter::new();
-            items.iter().for_each(|item| formatter.visit_item(item));
+        Ok(module) => {
+            DebugFormatter::new().visit_module(&module);
         }
         Err(err) => {
             let line_num = input[..err.span.lo as usize].lines().count() - 1;

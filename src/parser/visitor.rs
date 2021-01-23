@@ -1,5 +1,13 @@
 use super::ast::*;
 
+macro_rules! walk_all {
+    ($vis: expr, $method: ident, $list: expr) => {
+        for elem in $list {
+            $vis.$method(elem)
+        }
+    };
+}
+
 pub trait Visitor<'ast>: Sized {
     fn visit_item(&mut self, item: &'ast Item) {
         walk_item(self, item);
@@ -18,6 +26,9 @@ pub trait Visitor<'ast>: Sized {
     }
     fn visit_block(&mut self, block: &'ast Block) {
         walk_block(self, block);
+    }
+    fn visit_module(&mut self, module: &'ast Module) {
+        walk_all!(self, visit_item, &module.items);
     }
 }
 
@@ -45,14 +56,14 @@ pub fn walk_expr<'a, V: Visitor<'a>>(vis: &mut V, expr: &'a Expr) {
         }
         Call(ref expr, ref args) => {
             vis.visit_expr(expr);
-            args.iter().for_each(|arg| vis.visit_expr(arg));
+            walk_all!(vis, visit_expr, args);
         }
         As(ref expr, ref ty) => {
             vis.visit_expr(expr);
             vis.visit_type(ty);
         }
         Array(ref exprs) => {
-            exprs.iter().for_each(|expr| vis.visit_expr(expr));
+            walk_all!(vis, visit_expr, exprs);
         }
         Block(ref block) => vis.visit_block(block),
         If(ref expr, ref then, ref els) => {
